@@ -158,7 +158,10 @@
       <div class="sub">Tune it to match your in-game sens.</div>
       <div class="setrow"><label>Target size</label><input type="range" id="sSize" min="14" max="90" step="1"><span class="v" id="vSize"></span></div>
       <div class="setrow"><label>Targets</label><input type="range" id="sCount" min="1" max="12" step="1"><span class="v" id="vCount"></span></div>
-      <div class="setrow"><label>Duration</label><input type="range" id="sDur" min="15" max="120" step="5"><span class="v" id="vDur"></span></div>
+      <div class="setrow"><label>Duration</label><input type="range" id="sDur" min="15" max="600" step="15"><span class="v" id="vDur"></span></div>
+      <div class="setrow"><label>Endless</label><select id="sEndless">
+        <option value="0">Off — use the duration above</option>
+        <option value="1">On — play until you stop</option></select></div>
       <div class="setrow"><label>Crosshair</label>
         <select id="sCross">
           <option value="cross">Cross</option>
@@ -455,7 +458,7 @@ const S = {
   // sensitivity matching (defaults = a very common MW2/DMZ setup)
   game:'cod', dpi:800, sens:6, fov:80, raw:false, locked:false,
   // new: difficulty, theme, feedback, adaptive, warmup
-  diff:'normal', adaptive:false, theme:'neon',
+  diff:'normal', adaptive:false, theme:'neon', endless:false,
   heat:[], recentAcc:[], lastHitIdx:-1, shake:0, flash:0,
   warmup:false, warmupStep:0, warmupPlan:[],
   showHeat:true
@@ -468,7 +471,7 @@ function saveSettings(){
   const o = { size:S.size, count:S.count, dur:S.dur, cross:S.cross, crossSize:S.crossSize,
               color:S.color, sound:S.sound, move:S.move,
               game:S.game, dpi:S.dpi, sens:S.sens, fov:S.fov, raw:S.raw,
-              diff:S.diff, adaptive:S.adaptive, theme:S.theme };
+              diff:S.diff, adaptive:S.adaptive, theme:S.theme, endless:S.endless };
   try{ localStorage.setItem('dmq-aim-settings', JSON.stringify(o)); }catch(e){}
 }
 /** Screen pixels the crosshair moves per raw mouse count, so that the physical
@@ -605,7 +608,7 @@ function startDrill(){
   S.running = true; S.over = false;
   S.score = 0; S.hits = 0; S.misses = 0; S.combo = 0; S.bestCombo = 0;
   S.reactions = []; S.shots = []; S.particles = []; S.pops = [];
-  S.tLeft = (S.dur != null ? S.dur : M.dur); S.tElapsed = 0;
+  S.tLeft = S.endless ? Infinity : (S.dur != null ? S.dur : M.dur); S.tElapsed = 0;
   S.trackTime = 0; S.trial = 0; S.waiting = false; S.spawnedAt = 0;
   S.lastHitIdx = -1; S.shake = 0; S.flash = 0;
   S.lastFrame = performance.now();
@@ -792,7 +795,7 @@ function update(dt){
   if(!S.running) return;
   const M = MODES[S.mode];
   S.tElapsed += dt;
-  if(M.t !== 'react'){
+  if(M.t !== 'react' && S.tLeft !== Infinity){
     S.tLeft -= dt;
     if(S.tLeft <= 0){ S.tLeft = 0; endDrill(); return; }
   }
@@ -943,6 +946,7 @@ function updateHUD(){
   $('react').textContent = rs.length ? Math.round(rs.reduce((a,b)=>a+b,0)/rs.length) + ' ms' : '—';
   const M = MODES[S.mode];
   if(M.t === 'react') $('timer').textContent = (S.trial) + '/' + S.trials;
+  else if(S.tLeft === Infinity) $('timer').textContent = '∞';
   else $('timer').textContent = Math.ceil(S.tLeft) + 's';
   if(S.combo >= 3){
     const el = $('combo');
@@ -1227,7 +1231,9 @@ function syncSettingsUI(){
   const dur = S.dur != null ? S.dur : M.dur;
   $('sSize').value = size;   $('vSize').textContent = size;
   $('sCount').value = count; $('vCount').textContent = count;
-  $('sDur').value = dur || 45; $('vDur').textContent = dur ? dur + 's' : 'n/a';
+  $('sDur').value = dur || 45;
+  $('vDur').textContent = S.endless ? '\u221E' : (dur ? dur + 's' : 'n/a');
+  $('sEndless').value = S.endless ? '1' : '0';
   $('sCross').value = S.cross;
   $('sCrossSize').value = S.crossSize; $('vCrossSize').textContent = S.crossSize;
   $('sColor').value = S.color;
@@ -1288,7 +1294,12 @@ $('btnReset').addEventListener('click', () => {
 
 $('sSize').addEventListener('input', e => { S.size = +e.target.value; $('vSize').textContent = S.size; saveSettings(); });
 $('sCount').addEventListener('input', e => { S.count = +e.target.value; $('vCount').textContent = S.count; saveSettings(); });
-$('sDur').addEventListener('input', e => { S.dur = +e.target.value; $('vDur').textContent = S.dur + 's'; saveSettings(); });
+$('sDur').addEventListener('input', e => { S.dur = +e.target.value; $('vDur').textContent = S.endless ? '\u221E' : S.dur + 's'; saveSettings(); });
+$('sEndless').addEventListener('change', e => {
+  S.endless = e.target.value === '1';
+  saveSettings(); syncSettingsUI();
+  toast(S.endless ? 'Endless ON — play until you press Esc' : 'Endless OFF');
+});
 $('sCross').addEventListener('change', e => { S.cross = e.target.value; saveSettings(); });
 $('sCrossSize').addEventListener('input', e => { S.crossSize = +e.target.value; $('vCrossSize').textContent = S.crossSize; saveSettings(); });
 $('sColor').addEventListener('input', e => { S.color = e.target.value; saveSettings(); });
@@ -1323,7 +1334,8 @@ $('importFile').addEventListener('change', e => { if(e.target.files[0]) importSt
 window.addEventListener('keydown', e => {
   if(e.code === 'Escape'){
     if(S.locked) return;                       // Esc releases pointer lock, keep the drill
-    if(S.running){ S.running = false; renderModes(); show('menu'); } else show('menu');
+    if(S.running){ endDrill(); return; }       // finish + record the run, then show results
+    show('menu');
   }
   if(e.code === 'Space' && !S.running && !S.locked){ e.preventDefault(); startDrill(); }
 });
