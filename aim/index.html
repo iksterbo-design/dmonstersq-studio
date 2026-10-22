@@ -69,6 +69,14 @@
   .setrow select{background:#0a0e14;border:1px solid var(--line);color:var(--txt);
                  border-radius:6px;padding:4px 7px;font-size:12px;flex:1}
   .setrow .v{min-width:40px;text-align:right;font-family:Consolas,monospace;color:var(--txt)}
+  .setrow input[type=number]{background:#0a0e14;border:1px solid var(--line);color:var(--txt);
+                 border-radius:6px;padding:4px 7px;font-size:12px;flex:1;min-width:0}
+  .sensout{background:#0a0e14;border:1px solid var(--line);border-radius:10px;
+           padding:10px 12px;margin:8px 0 4px;font-size:12px}
+  .sensout .r{display:flex;justify-content:space-between;padding:3px 0}
+  .sensout .r span{color:var(--dim)}
+  .sensout .r b{color:var(--acc2);font-family:Consolas,monospace}
+  .sensnote{font-size:11px;color:var(--dim);line-height:1.5;margin-top:8px}
   .results{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
   .rstat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px}
   .rstat .k{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
@@ -159,6 +167,23 @@
       <div class="setrow"><label>Colour</label><input type="color" id="sColor"></div>
       <div class="setrow"><label>Sound</label><select id="sSound"><option value="1">On</option><option value="0">Off</option></select></div>
       <div class="setrow"><label>Target motion</label><select id="sMove"><option value="0">Static</option><option value="1">Drifting</option></select></div>
+
+      <div class="sec" style="margin:16px 0 4px;color:var(--acc2);font-weight:800;font-size:11px;letter-spacing:.6px">
+        🎯 MATCH YOUR MW2 / DMZ SENSITIVITY</div>
+      <div class="setrow"><label>Game</label><select id="sGame"></select></div>
+      <div class="setrow"><label>Mouse DPI</label><input type="number" id="sDpi" min="100" max="32000" step="50"></div>
+      <div class="setrow"><label>In-game sens</label><input type="number" id="sSens" min="0.1" max="20" step="0.01"></div>
+      <div class="setrow"><label>Game FOV</label><input type="range" id="sFov" min="60" max="120" step="1"><span class="v" id="vFov"></span></div>
+      <div class="sensout" id="sensOut"></div>
+      <div class="setrow"><label>Raw input</label>
+        <button class="btn" id="btnRaw" style="flex:1">🎯 Enable raw input</button></div>
+      <div class="sensnote">
+        Raw input uses Pointer Lock so the crosshair is driven by real mouse deltas and scaled
+        to your <b>actual cm/360°</b>. For an exact match, set Windows pointer speed to the
+        middle notch (6/11) and turn <b>off</b> "Enhance pointer precision".
+        Press <b>Esc</b> to release the mouse.
+      </div>
+
       <div class="actions">
         <button class="btn" id="btnReset">↺ Reset scores</button>
         <button class="btn primary" id="btnCloseSettings">Done</button>
@@ -279,6 +304,27 @@ function click(freq, dur, type, vol){
   }catch(e){}
 }
 
+/* ---------------- sensitivity: yaw per game (degrees per count at sens 1) ---- */
+const YAWS = {
+  cod:      { n:'CoD: MW2 / Warzone / DMZ', y:0.0066 },
+  ow2:      { n:'Overwatch 2',              y:0.0066 },
+  destiny2: { n:'Destiny 2',                y:0.0066 },
+  cs2:      { n:'CS2 / CS:GO',              y:0.022  },
+  apex:     { n:'Apex Legends',             y:0.022  },
+  tf2:      { n:'Team Fortress 2',          y:0.022  },
+  kovaaks:  { n:"KovaaK's",                 y:0.022  },
+  valorant: { n:'Valorant',                 y:0.07   },
+  aimlabs:  { n:'Aimlabs',                  y:0.05   },
+  r6:       { n:'Rainbow Six Siege',        y:0.00572957795 },
+  fortnite: { n:'Fortnite',                 y:0.005555 },
+  halo:     { n:'Halo Infinite',            y:0.02222 }
+};
+function yawOf(key){ return (YAWS[key] || YAWS.cod).y; }
+/** 914.4 = 360 deg x 2.54 cm-per-inch */
+function cm360(dpi, sens, yaw){ return 914.4 / (dpi * sens * yaw); }
+function in360(dpi, sens, yaw){ return 360  / (dpi * sens * yaw); }
+function edpi(dpi, sens){ return dpi * sens; }
+
 /* ---------------- modes ---------------- */
 const MODES = {
   gridshot:  { n:'Gridshot',  d:'Several targets at once — click them as fast as you can.', size:48, count:6, dur:60, t:'scored' },
@@ -299,7 +345,9 @@ const S = {
   trial:0, trials:20, waiting:false, waitUntil:0, spawnedAt:0,
   // settings
   size:null, count:null, dur:null,
-  cross:'crossdot', crossSize:14, color:'#2dd4bf', sound:true, move:false
+  cross:'crossdot', crossSize:14, color:'#2dd4bf', sound:true, move:false,
+  // sensitivity matching (defaults = a very common MW2/DMZ setup)
+  game:'cod', dpi:800, sens:6, fov:80, raw:false, locked:false
 };
 try{ Object.assign(S, JSON.parse(localStorage.getItem('dmq-aim-settings') || '{}')); }catch(e){}
 let BESTS = {};
@@ -307,8 +355,14 @@ try{ BESTS = JSON.parse(localStorage.getItem('dmq-aim-bests') || '{}'); }catch(e
 
 function saveSettings(){
   const o = { size:S.size, count:S.count, dur:S.dur, cross:S.cross, crossSize:S.crossSize,
-              color:S.color, sound:S.sound, move:S.move };
+              color:S.color, sound:S.sound, move:S.move,
+              game:S.game, dpi:S.dpi, sens:S.sens, fov:S.fov, raw:S.raw };
   try{ localStorage.setItem('dmq-aim-settings', JSON.stringify(o)); }catch(e){}
+}
+/** Screen pixels the crosshair moves per raw mouse count, so that the physical
+ *  mouse distance needed for a flick matches MW2/DMZ exactly. */
+function rawScale(){
+  return S.sens * yawOf(S.game) * (W / S.fov);
 }
 function saveBests(){ try{ localStorage.setItem('dmq-aim-bests', JSON.stringify(BESTS)); }catch(e){} }
 
@@ -393,10 +447,45 @@ function pos(e){
   const cy = (e.touches ? e.touches[0].clientY : e.clientY);
   return { x: cx - r.left, y: cy - r.top };
 }
-canvas.addEventListener('mousemove', e => { const p = pos(e); S.mouse.x = p.x; S.mouse.y = p.y; });
+
+/* Raw input: with Pointer Lock the crosshair is driven by raw mouse deltas and
+   scaled by rawScale(), so the physical distance you must move the mouse for a
+   flick is the same as in MW2/DMZ at your real DPI + sensitivity. */
+canvas.addEventListener('mousemove', e => {
+  if(S.locked){
+    const k = rawScale();
+    S.mouse.x = Math.max(0, Math.min(W, S.mouse.x + (e.movementX || 0) * k));
+    S.mouse.y = Math.max(0, Math.min(H, S.mouse.y + (e.movementY || 0) * k));
+  } else {
+    const p = pos(e); S.mouse.x = p.x; S.mouse.y = p.y;
+  }
+});
 canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = pos(e); S.mouse.x = p.x; S.mouse.y = p.y; }, {passive:false});
-canvas.addEventListener('mousedown', e => { e.preventDefault(); shoot(pos(e)); });
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  if(S.locked) shoot({ x: S.mouse.x, y: S.mouse.y });
+  else shoot(pos(e));
+});
 canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = pos(e); S.mouse.x=p.x; S.mouse.y=p.y; shoot(p); }, {passive:false});
+
+async function enableRaw(){
+  try{ await canvas.requestPointerLock(); }
+  catch(err){ S.rawMsg = 'Pointer lock blocked — click the play area once, then retry.'; }
+}
+document.addEventListener('pointerlockchange', () => {
+  S.locked = (document.pointerLockElement === canvas);
+  S.raw = S.locked;
+  const b = $('btnRaw');
+  if(b){
+    b.textContent = S.locked ? '🔒 Raw input ON — press Esc to release' : '🎯 Enable raw input';
+    b.classList.toggle('primary', S.locked);
+  }
+  saveSettings();
+});
+document.addEventListener('pointerlockerror', () => {
+  const b = $('btnRaw');
+  if(b) b.textContent = '⚠ Pointer lock blocked — click the arena, then retry';
+});
 
 function shoot(p){
   if(!S.running) return;
@@ -659,6 +748,29 @@ function syncSettingsUI(){
   $('sColor').value = S.color;
   $('sSound').value = S.sound ? '1' : '0';
   $('sMove').value = S.move ? '1' : '0';
+  // ---- sensitivity ----
+  const gsel = $('sGame');
+  if(gsel && !gsel.options.length){
+    gsel.innerHTML = Object.entries(YAWS).map(([k, v]) =>
+      '<option value="' + k + '">' + v.n + '</option>').join('');
+  }
+  if(gsel) gsel.value = S.game;
+  $('sDpi').value = S.dpi;
+  $('sSens').value = S.sens;
+  $('sFov').value = S.fov; $('vFov').textContent = S.fov + '\u00B0';
+  updateSensOut();
+}
+
+function updateSensOut(){
+  const el = $('sensOut');
+  if(!el) return;
+  const y = yawOf(S.game);
+  el.innerHTML =
+    '<div class="r"><span>cm / 360\u00B0</span><b>' + cm360(S.dpi, S.sens, y).toFixed(1) + '</b></div>' +
+    '<div class="r"><span>inches / 360\u00B0</span><b>' + in360(S.dpi, S.sens, y).toFixed(1) + '</b></div>' +
+    '<div class="r"><span>eDPI</span><b>' + Math.round(edpi(S.dpi, S.sens)) + '</b></div>' +
+    '<div class="r"><span>degrees / count</span><b>' + (S.sens * y).toFixed(5) + '</b></div>' +
+    '<div class="r"><span>crosshair px / count</span><b>' + rawScale().toFixed(3) + '</b></div>';
 }
 
 $('btnMenu').addEventListener('click', () => { S.running = false; renderModes(); show('menu'); });
@@ -682,9 +794,19 @@ $('sColor').addEventListener('input', e => { S.color = e.target.value; saveSetti
 $('sSound').addEventListener('change', e => { S.sound = e.target.value === '1'; saveSettings(); });
 $('sMove').addEventListener('change', e => { S.move = e.target.value === '1'; saveSettings(); });
 
+/* sensitivity controls */
+$('sGame').addEventListener('change', e => { S.game = e.target.value; saveSettings(); updateSensOut(); });
+$('sDpi').addEventListener('input', e => { const v = +e.target.value; if(v > 0){ S.dpi = v; saveSettings(); updateSensOut(); } });
+$('sSens').addEventListener('input', e => { const v = +e.target.value; if(v > 0){ S.sens = v; saveSettings(); updateSensOut(); } });
+$('sFov').addEventListener('input', e => { S.fov = +e.target.value; $('vFov').textContent = S.fov + '\u00B0'; saveSettings(); updateSensOut(); });
+$('btnRaw').addEventListener('click', enableRaw);
+
 window.addEventListener('keydown', e => {
-  if(e.code === 'Escape'){ if(S.running){ S.running = false; renderModes(); show('menu'); } else show('menu'); }
-  if(e.code === 'Space' && !S.running){ e.preventDefault(); startDrill(); }
+  if(e.code === 'Escape'){
+    if(S.locked) return;                       // Esc releases pointer lock, keep the drill
+    if(S.running){ S.running = false; renderModes(); show('menu'); } else show('menu');
+  }
+  if(e.code === 'Space' && !S.running && !S.locked){ e.preventDefault(); startDrill(); }
 });
 
 /* ---------------- main loop ---------------- */
