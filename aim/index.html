@@ -141,6 +141,8 @@
       <div class="modes" id="modeList"></div>
       <div class="actions">
         <button class="btn primary" id="btnStart">▶ Start drill</button>
+        <button class="btn" id="btnWarmup">🔥 Warmup routine</button>
+        <button class="btn" id="btnFull">⛶ Fullscreen</button>
       </div>
       <div class="safe">
         ✅ This is a <b>trainer</b>, not a cheat. It runs in its own window and never touches
@@ -168,6 +170,12 @@
       <div class="setrow"><label>Colour</label><input type="color" id="sColor"></div>
       <div class="setrow"><label>Sound</label><select id="sSound"><option value="1">On</option><option value="0">Off</option></select></div>
       <div class="setrow"><label>Target motion</label><select id="sMove"><option value="0">Static</option><option value="1">Drifting</option></select></div>
+      <div class="setrow"><label>Difficulty</label><select id="sDiff">
+        <option value="easy">Easy</option><option value="normal">Normal</option>
+        <option value="hard">Hard</option><option value="insane">Insane</option></select></div>
+      <div class="setrow"><label>Adaptive</label><select id="sAdaptive">
+        <option value="0">Off</option><option value="1">On — auto-tune target size</option></select></div>
+      <div class="setrow"><label>Theme</label><select id="sTheme"></select></div>
 
       <div class="sec" style="margin:16px 0 4px;color:var(--acc2);font-weight:800;font-size:11px;letter-spacing:.6px">
         🎯 MATCH YOUR MW2 / DMZ SENSITIVITY</div>
@@ -277,8 +285,22 @@
       <canvas id="chart" width="1200" height="420"
               style="width:100%;height:auto;background:#0a0e14;border:1px solid var(--line);border-radius:10px;margin:12px 0"></canvas>
       <div class="results" id="pStats"></div>
+
+      <div class="sec" style="margin:16px 0 4px;color:var(--acc2);font-weight:800;font-size:11px;letter-spacing:.6px">
+        🎯 SHOT HEATMAP — where you actually click</div>
+      <canvas id="heatmap" width="1200" height="660"
+              style="width:100%;height:auto;background:#0a0e14;border:1px solid var(--line);border-radius:10px;margin:8px 0"></canvas>
+      <div class="sensnote" id="heatNote"></div>
+
+      <div class="sec" style="margin:16px 0 4px;color:var(--acc2);font-weight:800;font-size:11px;letter-spacing:.6px">
+        🏆 ACHIEVEMENTS</div>
+      <div id="achGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
+
       <div class="actions">
         <button class="btn" id="btnClearHist">🗑 Clear history</button>
+        <button class="btn" id="btnExport">⬇ Export stats</button>
+        <button class="btn" id="btnImport">⬆ Import</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
         <button class="btn primary" id="btnCloseProgress">Done</button>
       </div>
     </div>
@@ -345,12 +367,78 @@ function edpi(dpi, sens){ return dpi * sens; }
 
 /* ---------------- modes ---------------- */
 const MODES = {
-  gridshot:  { n:'Gridshot',  d:'Several targets at once — click them as fast as you can.', size:48, count:6, dur:60, t:'scored' },
-  flick:     { n:'Flick',     d:'One target at a time. Snap to it and click.',              size:44, count:1, dur:60, t:'scored' },
-  precision: { n:'Precision', d:'Small targets, several up. Make every shot count.',        size:22, count:3, dur:60, t:'scored' },
-  tracking:  { n:'Tracking',  d:'Hold the crosshair on a drifting target. Time on target scores.', size:80, count:1, dur:45, t:'track' },
-  reaction:  { n:'Reaction',  d:'20 trials. Pure reaction time — no time limit.',           size:60, count:1, dur:0,  t:'react' }
+  gridshot:  { n:'Gridshot',   d:'Several targets at once — click them as fast as you can.', size:48, count:6, dur:60, t:'scored' },
+  flick:     { n:'Flick',      d:'One target at a time. Snap to it and click.',              size:44, count:1, dur:60, t:'scored' },
+  micro:     { n:'Microshot',  d:'Tiny targets. Pure precision, no sloppy shots.',           size:14, count:2, dur:60, t:'scored' },
+  precision: { n:'Precision',  d:'Small targets, several up. Make every shot count.',        size:22, count:3, dur:60, t:'scored' },
+  switching: { n:'Switching',  d:'Two targets — you must ALTERNATE between them.',           size:46, count:2, dur:60, t:'switch' },
+  tracking:  { n:'Tracking',   d:'Hold the crosshair on a drifting target. Time on target scores.', size:80, count:1, dur:45, t:'track' },
+  strafe:    { n:'Strafe Track', d:'Track a target strafing hard side to side.',             size:66, count:1, dur:45, t:'track' },
+  peek:      { n:'Peek',       d:'Targets flash in and out — hit them before they vanish.',  size:48, count:2, dur:60, t:'peek' },
+  reaction:  { n:'Reaction',   d:'20 trials. Pure reaction time — no time limit.',           size:60, count:1, dur:0,  t:'react' }
 };
+
+/* ---------------- difficulty ---------------- */
+const DIFF = {
+  easy:   { n:'Easy',   size:1.45, life:1.6,  speed:0.7, score:0.8 },
+  normal: { n:'Normal', size:1.00, life:1.0,  speed:1.0, score:1.0 },
+  hard:   { n:'Hard',   size:0.72, life:0.75, speed:1.3, score:1.3 },
+  insane: { n:'Insane', size:0.52, life:0.58, speed:1.6, score:1.7 }
+};
+function diff(){ return DIFF[S.diff] || DIFF.normal; }
+/** adaptive nudge: tighten if you're crushing it, loosen if you're drowning */
+function adaptMul(){
+  if(!S.adaptive) return 1;
+  const n = S.recentAcc.length;
+  if(n < 8) return 1;
+  const acc = S.recentAcc.slice(-12).reduce((a,b)=>a+b,0) / Math.min(12, n);
+  if(acc > 88) return 0.85;
+  if(acc > 78) return 0.93;
+  if(acc < 55) return 1.20;
+  if(acc < 65) return 1.10;
+  return 1;
+}
+
+/* ---------------- themes ---------------- */
+const THEMES = {
+  neon:   { n:'Neon',      t1:'#2dd4bf', t2:'#0d9488', bg:'#070a0f', grid:'#ffffff07', hit:'#2dd4bf', acc:'#7c5cff' },
+  ice:    { n:'Ice',       t1:'#7dd3fc', t2:'#0369a1', bg:'#05080f', grid:'#ffffff08', hit:'#38bdf8', acc:'#a78bfa' },
+  ember:  { n:'Ember',     t1:'#fbbf24', t2:'#b45309', bg:'#0d0805', grid:'#ffffff08', hit:'#fbbf24', acc:'#f87171' },
+  plasma: { n:'Plasma',    t1:'#e879f9', t2:'#7c3aed', bg:'#0a0612', grid:'#ffffff08', hit:'#e879f9', acc:'#22d3ee' },
+  mono:   { n:'Mono',      t1:'#e5e7eb', t2:'#6b7280', bg:'#0a0a0a', grid:'#ffffff0a', hit:'#f3f4f6', acc:'#9ca3af' },
+  cb:     { n:'Deuteranopia-safe', t1:'#38bdf8', t2:'#1e40af', bg:'#070a0f', grid:'#ffffff07', hit:'#fbbf24', acc:'#f472b6' }
+};
+function theme(){ return THEMES[S.theme] || THEMES.neon; }
+
+/* ---------------- achievements ---------------- */
+const ACHIEVEMENTS = [
+  { id:'first',   n:'First Blood',    d:'Finish your first drill',                 test:() => HISTORY.length >= 1 },
+  { id:'combo10', n:'Combo x10',      d:'Reach a 10x combo in one drill',          test:() => S.bestCombo >= 10 },
+  { id:'combo25', n:'Combo x25',      d:'Reach a 25x combo in one drill',          test:() => S.bestCombo >= 25 },
+  { id:'acc90',   n:'Surgeon',        d:'Finish a drill at 90%+ accuracy',         test:() => (S.hits+S.misses) > 10 && S.hits/(S.hits+S.misses) >= 0.90 },
+  { id:'acc100',  n:'Flawless',       d:'Finish a drill at 100% accuracy',         test:() => (S.hits+S.misses) >= 15 && S.misses === 0 },
+  { id:'react200',n:'Quickdraw',      d:'Average under 200 ms in Reaction',        test:() => S.reactions.length >= 10 && (S.reactions.reduce((a,b)=>a+b,0)/S.reactions.length) < 200 },
+  { id:'score2k', n:'Two Thousand',   d:'Score 2,000+ in a single drill',          test:() => S.score >= 2000 },
+  { id:'score4k', n:'Four Thousand',  d:'Score 4,000+ in a single drill',          test:() => S.score >= 4000 },
+  { id:'allmodes',n:'Well Rounded',   d:'Play every drill at least once',          test:() => Object.keys(MODES).every(k => HISTORY.some(h => h.m === k)) },
+  { id:'insane',  n:'Certified Insane', d:'Finish any drill on Insane difficulty', test:() => S.diff === 'insane' && S.running === false && S.over },
+  { id:'streak5', n:'On A Roll',      d:'Play 5 drills in one session',            test:() => HISTORY.length >= 5 },
+  { id:'grind25', n:'Dedicated',      d:'Log 25 drills',                           test:() => HISTORY.length >= 25 }
+];
+let UNLOCKED = {};
+try{ UNLOCKED = JSON.parse(localStorage.getItem('dmq-aim-ach') || '{}'); }catch(e){}
+function saveAch(){ try{ localStorage.setItem('dmq-aim-ach', JSON.stringify(UNLOCKED)); }catch(e){} }
+let newAchQueue = [];
+function checkAchievements(){
+  ACHIEVEMENTS.forEach(a => {
+    if(!UNLOCKED[a.id]){
+      let ok = false;
+      try{ ok = a.test(); }catch(e){}
+      if(ok){ UNLOCKED[a.id] = Date.now(); newAchQueue.push(a); }
+    }
+  });
+  if(newAchQueue.length) saveAch();
+}
 
 /* ---------------- state ---------------- */
 const S = {
@@ -365,7 +453,12 @@ const S = {
   size:null, count:null, dur:null,
   cross:'crossdot', crossSize:14, color:'#2dd4bf', sound:true, move:false,
   // sensitivity matching (defaults = a very common MW2/DMZ setup)
-  game:'cod', dpi:800, sens:6, fov:80, raw:false, locked:false
+  game:'cod', dpi:800, sens:6, fov:80, raw:false, locked:false,
+  // new: difficulty, theme, feedback, adaptive, warmup
+  diff:'normal', adaptive:false, theme:'neon',
+  heat:[], recentAcc:[], lastHitIdx:-1, shake:0, flash:0,
+  warmup:false, warmupStep:0, warmupPlan:[],
+  showHeat:true
 };
 try{ Object.assign(S, JSON.parse(localStorage.getItem('dmq-aim-settings') || '{}')); }catch(e){}
 let BESTS = {};
@@ -374,7 +467,8 @@ try{ BESTS = JSON.parse(localStorage.getItem('dmq-aim-bests') || '{}'); }catch(e
 function saveSettings(){
   const o = { size:S.size, count:S.count, dur:S.dur, cross:S.cross, crossSize:S.crossSize,
               color:S.color, sound:S.sound, move:S.move,
-              game:S.game, dpi:S.dpi, sens:S.sens, fov:S.fov, raw:S.raw };
+              game:S.game, dpi:S.dpi, sens:S.sens, fov:S.fov, raw:S.raw,
+              diff:S.diff, adaptive:S.adaptive, theme:S.theme };
   try{ localStorage.setItem('dmq-aim-settings', JSON.stringify(o)); }catch(e){}
 }
 /** Screen pixels the crosshair moves per raw mouse count, so that the physical
@@ -392,16 +486,21 @@ function saveHistory(){
 }
 function recordRun(){
   const shots = S.hits + S.misses;
+  const acc = shots ? +(S.hits / shots * 100).toFixed(1) : 0;
   HISTORY.push({
     m: S.mode,
     t: Date.now(),
     s: Math.round(S.score),
-    a: shots ? +(S.hits / shots * 100).toFixed(1) : 0,
+    a: acc,
     r: S.reactions.length ? Math.round(S.reactions.reduce((x, y) => x + y, 0) / S.reactions.length) : 0,
-    k: S.hits
+    k: S.hits,
+    d: S.diff
   });
   if(HISTORY.length > 400) HISTORY = HISTORY.slice(-400);
   saveHistory();
+  S.recentAcc.push(acc);
+  if(S.recentAcc.length > 40) S.recentAcc.shift();
+  checkAchievements();
 }
 
 function applyMode(m){
@@ -418,28 +517,74 @@ function randPos(r){
   return { x: pad + Math.random() * Math.max(1, W - pad*2),
            y: pad + 14 + Math.random() * Math.max(1, H - pad*2 - 28) };
 }
-function makeTarget(){
-  const r = (S.size != null ? S.size : 44) / 2;
-  const p = randPos(r);
-  const t = { x:p.x, y:p.y, r, born:performance.now(), life:0, alive:true,
-              vx:0, vy:0, hue: (S.mode==='precision' ? 275 : 165) };
-  if(S.move){
-    const sp = 40 + Math.random()*70, a = Math.random()*Math.PI*2;
+function targetRadius(){
+  const d = diff();
+  const base = (S.size != null ? S.size : 44);
+  return Math.max(4.5, base * d.size * adaptMul()) / 2;
+}
+function seedMotion(t){
+  const d = diff();
+  if(S.mode === 'strafe'){
+    t.vx = (Math.random() < 0.5 ? -1 : 1) * (170 + Math.random()*110) * d.speed;
+    t.vy = (Math.random() - 0.5) * 24 * d.speed;
+  } else if(S.move){
+    const sp = (40 + Math.random()*70) * d.speed, a = Math.random()*Math.PI*2;
     t.vx = Math.cos(a)*sp; t.vy = Math.sin(a)*sp;
+  } else { t.vx = 0; t.vy = 0; }
+}
+function makeTarget(idx){
+  const r = targetRadius();
+  const p = randPos(r);
+  const M = MODES[S.mode];
+  const t = { x:p.x, y:p.y, r, born:performance.now(), alive:true, idx:(idx|0),
+              vx:0, vy:0, ttl:0, maxTtl:0 };
+  if(M.t === 'peek'){
+    t.maxTtl = (1.15 + Math.random()*0.95) / (diff().life || 1);
+    t.ttl = t.maxTtl;
   }
+  seedMotion(t);
   return t;
 }
 function spawn(count){
   S.targets = [];
-  for(let i=0;i<count;i++) S.targets.push(makeTarget());
+  for(let i=0;i<count;i++) S.targets.push(makeTarget(i));
 }
 function respawn(t){
-  const r = t.r, p = randPos(r);
-  t.x = p.x; t.y = p.y; t.born = performance.now();
-  if(S.move){
-    const sp = 40 + Math.random()*70, a = Math.random()*Math.PI*2;
-    t.vx = Math.cos(a)*sp; t.vy = Math.sin(a)*sp;
+  const r = targetRadius();
+  const p = randPos(r);
+  t.x = p.x; t.y = p.y; t.r = r; t.born = performance.now(); t.alive = true;
+  if(MODES[S.mode].t === 'peek'){
+    t.maxTtl = (1.15 + Math.random()*0.95) / (diff().life || 1);
+    t.ttl = t.maxTtl;
   }
+  seedMotion(t);
+}
+
+/* ---------------- toast + achievement popups ---------------- */
+let toastTimer;
+function toast(msg, colour){
+  let el = $('aimToast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'aimToast';
+    el.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);' +
+      'background:#7c5cff;color:#fff;padding:12px 22px;border-radius:12px;font-size:14px;' +
+      'font-weight:700;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;' +
+      'box-shadow:0 10px 34px #000b;max-width:88vw;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.style.background = colour || '#7c5cff';
+  el.textContent = msg;
+  el.style.opacity = 1;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.opacity = 0; }, 2300);
+}
+function flushAchievements(){
+  if(!newAchQueue.length) return;
+  const a = newAchQueue.shift();
+  toast('🏆 ' + a.n + ' — ' + a.d, '#f59e0b');
+  click(1046, 0.12, 'triangle', 0.06);
+  if(newAchQueue.length) setTimeout(flushAchievements, 2500);
 }
 
 /* ---------------- effects ---------------- */
@@ -462,6 +607,7 @@ function startDrill(){
   S.reactions = []; S.shots = []; S.particles = []; S.pops = [];
   S.tLeft = (S.dur != null ? S.dur : M.dur); S.tElapsed = 0;
   S.trackTime = 0; S.trial = 0; S.waiting = false; S.spawnedAt = 0;
+  S.lastHitIdx = -1; S.shake = 0; S.flash = 0;
   S.lastFrame = performance.now();
   hideAll();
   if(M.t === 'react'){ S.targets = []; nextTrial(0); }
@@ -472,7 +618,44 @@ function endDrill(){
   if(!S.running) return;
   S.running = false; S.over = true;
   recordRun();
-  showResults();
+  if(S.warmup) advanceWarmup();
+  else showResults();
+}
+
+/* ---------------- warmup routine ---------------- */
+const WARMUP_PLAN = [
+  ['reaction',  null,       null],
+  ['micro',     'easy',     30],
+  ['gridshot',  'normal',   45],
+  ['flick',     'normal',   45],
+  ['switching', 'normal',   40],
+  ['tracking',  'normal',   40]
+];
+function startWarmup(){
+  S.warmup = true; S.warmupStep = 0;
+  applyWarmupStep();
+}
+function applyWarmupStep(){
+  const step = WARMUP_PLAN[S.warmupStep];
+  if(!step){ S.warmup = false; toast('Warmup complete! 🔥'); renderModes(); show('menu'); return; }
+  const [mode, diffKey, dur] = step;
+  S.mode = mode;
+  const M = MODES[mode];
+  S.size = M.size; S.count = M.count;
+  S.dur = dur != null ? dur : M.dur;
+  S.diff = diffKey || S.diff;
+  syncSettingsUI();
+  startDrill();
+}
+function advanceWarmup(){
+  S.warmupStep++;
+  if(S.warmupStep >= WARMUP_PLAN.length){
+    S.warmup = false;
+    showResults();
+    toast('Warmup complete! 🔥');
+    return;
+  }
+  setTimeout(applyWarmupStep, 900);
 }
 function nextTrial(delay){
   S.waiting = true;
@@ -555,33 +738,52 @@ function shoot(p){
     return;
   }
 
-  // scored / track modes
+  // scored / track / switch / peek modes
   let hit = false;
   for(let i=0;i<S.targets.length;i++){
     const t = S.targets[i];
     if(!t.alive) continue;
     if(Math.hypot(p.x - t.x, p.y - t.y) <= t.r){
+      // Switching: you must alternate between the two targets
+      if(M.t === 'switch' && S.lastHitIdx === t.idx && S.targets.length > 1){
+        S.misses++; S.combo = 0; S.shake = 9;
+        click(150, 0.07, 'sawtooth', 0.06);
+        popText(t.x, t.y - 18, 'WRONG', '#ff5c5c');
+        S.heat.push({ x: p.x/W, y: p.y/H, hit: 0 });
+        updateHUD(); return;
+      }
       hit = true;
       const rt = performance.now() - t.born;
       S.reactions.push(rt);
       S.hits++; S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo);
-      const sizeBonus = Math.round(60 * (44 / t.r));
-      const pts = 100 + sizeBonus + S.combo * 5;
+      const sizeBonus = Math.round(70 * (44 / t.r));
+      const pts = Math.round((100 + sizeBonus + S.combo * 6) * diff().score);
       S.score += pts;
-      burst(t.x, t.y, '#2dd4bf');
-      popText(t.x, t.y - 18, '+' + pts, '#2dd4bf');
-      click(760 + Math.min(S.combo, 12) * 30, 0.05, 'square', 0.07);
-      if(M.t === 'track'){ respawn(t); }
-      else if((S.count != null ? S.count : M.count) <= 1){ respawn(t); }
-      else { t.alive = false; setTimeout(() => { respawn(t); t.alive = true; }, 180); }
+      const th = theme();
+      burst(t.x, t.y, th.hit);
+      popText(t.x, t.y - 18, '+' + pts, th.hit);
+      click(680 + Math.min(S.combo, 16) * 34, 0.05, 'square', 0.075);
+      S.shake = Math.min(7, 1.5 + S.combo * 0.28);
+      S.flash = 0.32;
+      S.heat.push({ x: p.x/W, y: p.y/H, hit: 1 });
+      S.lastHitIdx = t.idx;
+      if(M.t === 'track' || M.t === 'peek' || (S.count != null ? S.count : M.count) <= 1){
+        respawn(t);
+      } else {
+        t.alive = false;
+        setTimeout(() => { respawn(t); t.alive = true; }, 170);
+      }
       break;
     }
   }
   if(!hit){
     S.misses++; S.combo = 0;
-    click(170, 0.06, 'sawtooth', 0.05);
+    click(160, 0.07, 'sawtooth', 0.05);
     popText(p.x, p.y, 'miss', '#ff5c5c');
+    S.heat.push({ x: p.x/W, y: p.y/H, hit: 0 });
+    S.shake = 3.5;
   }
+  if(S.heat.length > 4000) S.heat = S.heat.slice(-4000);
   updateHUD();
 }
 
@@ -602,16 +804,37 @@ function update(dt){
     S.spawnedAt = performance.now();
   }
 
-  // target drift
-  if(S.move){
+  // target drift (strafe always moves; others only if "drifting" is on)
+  const moving = (S.move || S.mode === 'strafe');
+  if(moving){
     for(const t of S.targets){
       t.x += t.vx * dt; t.y += t.vy * dt;
-      if(t.x < t.r + 6){ t.x = t.r + 6; t.vx *= -1; }
-      if(t.x > W - t.r - 6){ t.x = W - t.r - 6; t.vx *= -1; }
-      if(t.y < t.r + 6){ t.y = t.r + 6; t.vy *= -1; }
-      if(t.y > H - t.r - 6){ t.y = H - t.r - 6; t.vy *= -1; }
+      if(t.x < t.r + 6){ t.x = t.r + 6; t.vx = Math.abs(t.vx); }
+      if(t.x > W - t.r - 6){ t.x = W - t.r - 6; t.vx = -Math.abs(t.vx); }
+      if(t.y < t.r + 6){ t.y = t.r + 6; t.vy = Math.abs(t.vy); }
+      if(t.y > H - t.r - 6){ t.y = H - t.r - 6; t.vy = -Math.abs(t.vy); }
     }
   }
+
+  // peek: targets expire if you don't hit them in time
+  if(M.t === 'peek'){
+    for(const t of S.targets){
+      if(!t.alive) continue;
+      t.ttl -= dt;
+      if(t.ttl <= 0){
+        S.misses++; S.combo = 0;
+        popText(t.x, t.y, 'expired', '#ffb454');
+        click(220, 0.05, 'sine', 0.04);
+        respawn(t);
+      }
+    }
+  }
+
+  // feedback decay
+  S.shake *= Math.pow(0.0015, dt);
+  if(S.shake < 0.2) S.shake = 0;
+  S.flash *= Math.pow(0.002, dt);
+  if(S.flash < 0.01) S.flash = 0;
 
   // tracking score
   if(M.t === 'track' && S.targets.length){
@@ -631,26 +854,34 @@ function update(dt){
 
 /* ---------------- render ---------------- */
 function draw(){
-  ctx.clearRect(0,0,W,H);
+  const th = theme();
+  const sx = S.shake ? (Math.random() - 0.5) * S.shake : 0;
+  const sy = S.shake ? (Math.random() - 0.5) * S.shake : 0;
+  ctx.setTransform(DPR, 0, 0, DPR, sx * DPR, sy * DPR);
+
+  ctx.fillStyle = th.bg;
+  ctx.fillRect(-30, -30, W + 60, H + 60);
 
   // subtle grid
-  ctx.strokeStyle = '#ffffff07'; ctx.lineWidth = 1;
+  ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
   for(let x=0;x<W;x+=64){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
   for(let y=0;y<H;y+=64){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
   // targets
   for(const t of S.targets){
     if(!t.alive) continue;
+    let a = 1;
+    if(t.maxTtl > 0) a = Math.max(0.12, Math.min(1, t.ttl / (t.maxTtl * 0.4)));
+    ctx.globalAlpha = a;
     const g = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.r);
-    const c1 = S.mode === 'precision' ? '#c85cff' : '#2dd4bf';
-    const c2 = S.mode === 'precision' ? '#7c5cff' : '#0d9488';
-    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    g.addColorStop(0, th.t1); g.addColorStop(1, th.t2);
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#ffffff55'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(t.x, t.y, t.r - 1, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(t.x, t.y, Math.max(0.5, t.r - 1), 0, Math.PI*2); ctx.stroke();
     ctx.fillStyle = '#ffffffcc';
-    ctx.beginPath(); ctx.arc(t.x, t.y, Math.max(1.5, t.r*0.14), 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(t.x, t.y, Math.max(1.2, t.r*0.14), 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   // particles
@@ -669,6 +900,12 @@ function draw(){
     ctx.fillText(p.txt, p.x, p.y);
   }
   ctx.globalAlpha = 1;
+
+  // hit flash
+  if(S.flash > 0.01){
+    ctx.fillStyle = 'rgba(255,255,255,' + (S.flash * 0.09).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
 
   // crosshair
   drawCross(S.mouse.x, S.mouse.y);
@@ -748,6 +985,7 @@ function showResults(){
     '<div class="rstat"><div class="k">' + r[0] + '</div><div class="v ' + r[2] + '">' + r[1] + '</div></div>').join('');
 
   $('results').classList.remove('hide');
+  flushAchievements();
 }
 
 /* ---------------- progress chart ---------------- */
@@ -849,6 +1087,115 @@ function renderProgress(){
   drawChart();
 }
 
+/* ---------------- shot heatmap ---------------- */
+function drawHeatmap(){
+  const c = $('heatmap');
+  if(!c) return;
+  const x = c.getContext('2d');
+  const CW = c.width, CH = c.height;
+  x.clearRect(0, 0, CW, CH);
+  x.fillStyle = '#0a0e14'; x.fillRect(0, 0, CW, CH);
+
+  x.strokeStyle = '#ffffff08'; x.lineWidth = 1;
+  for(let i = 1; i < 8; i++){ x.beginPath(); x.moveTo(CW*i/8, 0); x.lineTo(CW*i/8, CH); x.stroke(); }
+  for(let i = 1; i < 5; i++){ x.beginPath(); x.moveTo(0, CH*i/5); x.lineTo(CW, CH*i/5); x.stroke(); }
+
+  const shots = S.heat;
+  if(!shots.length){
+    x.fillStyle = '#8b949e'; x.font = '22px "Segoe UI",sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('No shots recorded yet — play a drill.', CW/2, CH/2);
+    $('heatNote').textContent = '';
+    return;
+  }
+
+  const GX = 48, GY = 27;
+  const grid = new Float32Array(GX * GY);
+  let hits = 0, miss = 0;
+  shots.forEach(s => {
+    const gx = Math.min(GX-1, Math.max(0, Math.floor(s.x * GX)));
+    const gy = Math.min(GY-1, Math.max(0, Math.floor(s.y * GY)));
+    grid[gy*GX + gx] += 1;
+    s.hit ? hits++ : miss++;
+  });
+  let max = 1;
+  for(let i = 0; i < grid.length; i++) if(grid[i] > max) max = grid[i];
+
+  const cw = CW/GX, chh = CH/GY;
+  for(let gy = 0; gy < GY; gy++){
+    for(let gx = 0; gx < GX; gx++){
+      const v = grid[gy*GX + gx];
+      if(!v) continue;
+      const t = v/max;
+      const hue = 205 - t*205;                  // blue -> red
+      x.globalAlpha = 0.14 + t*0.82;
+      x.fillStyle = 'hsl(' + hue + ',88%,55%)';
+      x.fillRect(gx*cw, gy*chh, cw + 1, chh + 1);
+    }
+  }
+  x.globalAlpha = 1;
+
+  x.strokeStyle = '#ffffff33'; x.lineWidth = 2;
+  x.beginPath();
+  x.moveTo(CW/2, CH/2 - 15); x.lineTo(CW/2, CH/2 + 15);
+  x.moveTo(CW/2 - 15, CH/2); x.lineTo(CW/2 + 15, CH/2);
+  x.stroke();
+
+  $('heatNote').textContent = shots.length + ' shots this session · ' + hits + ' hits · ' + miss +
+    ' misses. Hotter = you click there more. A tight cluster near the centre means good crosshair ' +
+    'discipline; a smear off to one side means you habitually under- or over-flick that way.';
+}
+
+/* ---------------- achievements grid ---------------- */
+function renderAchievements(){
+  const g = $('achGrid');
+  if(!g) return;
+  const got = ACHIEVEMENTS.filter(a => UNLOCKED[a.id]).length;
+  g.innerHTML = ACHIEVEMENTS.map(a => {
+    const u = !!UNLOCKED[a.id];
+    return '<div class="rstat" style="' + (u
+        ? 'border-color:#f59e0b;background:#241a05'
+        : 'opacity:.5') + '">' +
+      '<div class="k">' + (u ? '🏆 UNLOCKED' : '🔒 LOCKED') + '</div>' +
+      '<div class="v" style="font-size:14px;' + (u ? 'color:#f59e0b' : '') + '">' + a.n + '</div>' +
+      '<div style="font-size:11px;color:#8b949e;margin-top:3px;line-height:1.4">' + a.d + '</div></div>';
+  }).join('');
+  const sub = $('pSub');
+  if(sub) sub.textContent = sub.textContent.replace(/ · \d+\/\d+ achievements$/, '') +
+    ' · ' + got + '/' + ACHIEVEMENTS.length + ' achievements';
+}
+
+/* ---------------- export / import ---------------- */
+function exportStats(){
+  const data = {
+    v: 1, app: 'DMQ AIM LAB', exported: new Date().toISOString(),
+    history: HISTORY, bests: BESTS, achievements: UNLOCKED,
+    settings: { game:S.game, dpi:S.dpi, sens:S.sens, fov:S.fov, diff:S.diff, theme:S.theme }
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dmq-aim-stats.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('Stats exported');
+}
+function importStats(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(Array.isArray(d.history)) HISTORY = d.history;
+      if(d.bests && typeof d.bests === 'object') BESTS = d.bests;
+      if(d.achievements && typeof d.achievements === 'object') UNLOCKED = d.achievements;
+      saveHistory(); saveBests(); saveAch();
+      renderProgress();
+      toast('Imported ' + HISTORY.length + ' runs');
+    }catch(e){ toast('Import failed: ' + e.message, '#ff5c5c'); }
+  };
+  r.readAsText(file);
+}
+
 /* ---------------- menu / settings wiring ---------------- */
 function hideAll(){ ['menu','settings','results','learn','progress'].forEach(id => $(id).classList.add('hide')); }
 function show(id){ hideAll(); $(id).classList.remove('hide'); }
@@ -896,6 +1243,15 @@ function syncSettingsUI(){
   $('sDpi').value = S.dpi;
   $('sSens').value = S.sens;
   $('sFov').value = S.fov; $('vFov').textContent = S.fov + '\u00B0';
+  // ---- difficulty / theme / adaptive ----
+  $('sDiff').value = S.diff;
+  $('sAdaptive').value = S.adaptive ? '1' : '0';
+  const tsel = $('sTheme');
+  if(tsel && !tsel.options.length){
+    tsel.innerHTML = Object.entries(THEMES).map(([k, v]) =>
+      '<option value="' + k + '">' + v.n + '</option>').join('');
+  }
+  if(tsel) tsel.value = S.theme;
   updateSensOut();
 }
 
@@ -919,7 +1275,7 @@ $('btnSettings').addEventListener('click', () => { syncSettingsUI(); show('setti
 $('btnCloseSettings').addEventListener('click', () => { saveSettings(); show('menu'); renderModes(); });
 $('btnLearn').addEventListener('click', () => show('learn'));
 $('btnCloseLearn').addEventListener('click', () => show('menu'));
-$('btnProgress').addEventListener('click', () => { show('progress'); renderProgress(); });
+$('btnProgress').addEventListener('click', () => { show('progress'); renderProgress(); renderAchievements(); drawHeatmap(); });
 $('btnResultsProgress').addEventListener('click', () => { show('progress'); renderProgress(); });
 $('btnCloseProgress').addEventListener('click', () => show('menu'));
 $('pMode').addEventListener('change', renderProgress);
@@ -945,6 +1301,24 @@ $('sDpi').addEventListener('input', e => { const v = +e.target.value; if(v > 0){
 $('sSens').addEventListener('input', e => { const v = +e.target.value; if(v > 0){ S.sens = v; saveSettings(); updateSensOut(); } });
 $('sFov').addEventListener('input', e => { S.fov = +e.target.value; $('vFov').textContent = S.fov + '\u00B0'; saveSettings(); updateSensOut(); });
 $('btnRaw').addEventListener('click', enableRaw);
+
+/* difficulty / theme / adaptive */
+$('sDiff').addEventListener('change', e => { S.diff = e.target.value; saveSettings(); toast('Difficulty: ' + diff().n); });
+$('sAdaptive').addEventListener('change', e => { S.adaptive = e.target.value === '1'; saveSettings(); toast(S.adaptive ? 'Adaptive difficulty ON' : 'Adaptive difficulty OFF'); });
+$('sTheme').addEventListener('change', e => { S.theme = e.target.value; saveSettings(); });
+
+/* warmup + fullscreen */
+$('btnWarmup').addEventListener('click', startWarmup);
+$('btnFull').addEventListener('click', () => {
+  const el = document.documentElement;
+  if(!document.fullscreenElement){ (el.requestFullscreen || el.webkitRequestFullscreen || (()=>{})).call(el); }
+  else { (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document); }
+});
+
+/* progress extras */
+$('btnExport').addEventListener('click', exportStats);
+$('btnImport').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', e => { if(e.target.files[0]) importStats(e.target.files[0]); e.target.value = ''; });
 
 window.addEventListener('keydown', e => {
   if(e.code === 'Escape'){
