@@ -2,20 +2,33 @@
 setlocal
 cd /d "%~dp0"
 
-where pythonw >nul 2>&1
+where pyw >nul 2>&1
 if %errorlevel%==0 (
-  start "" pythonw overlay.pyw
+  start "" pyw -3 "%~dp0overlay.pyw"
   exit /b
 )
 
-where python >nul 2>&1
+where py >nul 2>&1
 if %errorlevel%==0 (
-  start "" python overlay.pyw
+  start "" py -3 "%~dp0overlay.pyw"
+  exit /b
+)
+
+for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do (
+  if exist "%%~fD\pythonw.exe" (
+    start "" "%%~fD\pythonw.exe" "%~dp0overlay.pyw"
+    exit /b
+  )
+)
+
+where pythonw >nul 2>&1
+if %errorlevel%==0 (
+  start "" pythonw "%~dp0overlay.pyw"
   exit /b
 )
 
 echo.
-echo   Python was not found on your PATH.
+echo   Could not find Python on this PC.
 echo   Install it from https://www.python.org/downloads/
 echo   and tick "Add python.exe to PATH" during setup.
 echo.
