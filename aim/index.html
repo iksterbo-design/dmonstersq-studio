@@ -107,6 +107,7 @@
   <div class="logo">D MONSTERS Q STUDIO</div>
   <div class="badge">AIM LAB</div>
   <div class="spacer"></div>
+  <button class="btn ghost" id="btnProgress">📈 Progress</button>
   <button class="btn ghost" id="btnLearn">❓ How cheats get caught</button>
   <button class="btn" id="btnSettings">⚙ Settings</button>
   <button class="btn primary" id="btnMenu">☰ Modes</button>
@@ -201,6 +202,7 @@
       <div class="actions">
         <button class="btn primary" id="btnAgain">↻ Again</button>
         <button class="btn" id="btnBackMenu">☰ Modes</button>
+        <button class="btn" id="btnResultsProgress">📈 Progress</button>
       </div>
     </div>
   </div>
@@ -262,6 +264,22 @@
       </div>
       <div class="actions">
         <button class="btn primary" id="btnCloseLearn">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="overlay hide" id="progress">
+    <div class="card" style="max-width:660px">
+      <h1>PROGRESS</h1>
+      <div class="sub" id="pSub">Every completed drill is logged on this device.</div>
+      <div class="setrow"><label>Drill</label><select id="pMode"></select></div>
+      <canvas id="chart" width="1200" height="420"
+              style="width:100%;height:auto;background:#0a0e14;border:1px solid var(--line);border-radius:10px;margin:12px 0"></canvas>
+      <div class="results" id="pStats"></div>
+      <div class="actions">
+        <button class="btn" id="btnClearHist">🗑 Clear history</button>
+        <button class="btn primary" id="btnCloseProgress">Done</button>
       </div>
     </div>
   </div>
@@ -366,6 +384,26 @@ function rawScale(){
 }
 function saveBests(){ try{ localStorage.setItem('dmq-aim-bests', JSON.stringify(BESTS)); }catch(e){} }
 
+/* ---------------- history (progress tracking) ---------------- */
+let HISTORY = [];
+try{ HISTORY = JSON.parse(localStorage.getItem('dmq-aim-history') || '[]'); }catch(e){}
+function saveHistory(){
+  try{ localStorage.setItem('dmq-aim-history', JSON.stringify(HISTORY.slice(-400))); }catch(e){}
+}
+function recordRun(){
+  const shots = S.hits + S.misses;
+  HISTORY.push({
+    m: S.mode,
+    t: Date.now(),
+    s: Math.round(S.score),
+    a: shots ? +(S.hits / shots * 100).toFixed(1) : 0,
+    r: S.reactions.length ? Math.round(S.reactions.reduce((x, y) => x + y, 0) / S.reactions.length) : 0,
+    k: S.hits
+  });
+  if(HISTORY.length > 400) HISTORY = HISTORY.slice(-400);
+  saveHistory();
+}
+
 function applyMode(m){
   S.mode = m;
   const M = MODES[m];
@@ -433,6 +471,7 @@ function startDrill(){
 function endDrill(){
   if(!S.running) return;
   S.running = false; S.over = true;
+  recordRun();
   showResults();
 }
 function nextTrial(delay){
@@ -711,8 +750,107 @@ function showResults(){
   $('results').classList.remove('hide');
 }
 
+/* ---------------- progress chart ---------------- */
+function drawChart(){
+  const c = $('chart');
+  if(!c) return;
+  const x = c.getContext('2d');
+  const CW = c.width, CH = c.height;
+  x.clearRect(0, 0, CW, CH);
+  const mode = $('pMode').value;
+  const rows = HISTORY.filter(h => mode === 'all' || h.m === mode).slice(-40);
+  const padL = 74, padR = 74, padT = 30, padB = 34;
+  const plotW = CW - padL - padR, plotH = CH - padT - padB;
+
+  if(rows.length === 0){
+    x.fillStyle = '#8b949e'; x.font = '22px "Segoe UI",sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('No runs recorded yet — play a drill to start tracking.', CW/2, CH/2);
+    return;
+  }
+
+  const scores = rows.map(r => r.s);
+  const maxS = Math.max(1, ...scores) * 1.12, minS = 0;
+  const X  = i => padL + (rows.length === 1 ? plotW/2 : (i/(rows.length-1)) * plotW);
+  const Y  = v => padT + plotH - ((v - minS)/(maxS - minS)) * plotH;
+  const YA = v => padT + plotH - (v/100) * plotH;
+
+  // grid + score axis (left)
+  x.strokeStyle = '#ffffff10'; x.lineWidth = 1;
+  x.font = '15px Consolas,monospace'; x.textAlign = 'right'; x.textBaseline = 'middle';
+  for(let g = 0; g <= 4; g++){
+    const v = minS + (maxS - minS) * g/4, yy = Y(v);
+    x.beginPath(); x.moveTo(padL, yy); x.lineTo(CW - padR, yy); x.stroke();
+    x.fillStyle = '#2dd4bf'; x.fillText(Math.round(v).toLocaleString(), padL - 10, yy);
+  }
+  // accuracy axis (right)
+  x.textAlign = 'left';
+  for(let g = 0; g <= 4; g++){
+    x.fillStyle = '#7c5cffaa'; x.fillText((g*25) + '%', CW - padR + 10, YA(g*25));
+  }
+
+  // accuracy line
+  x.strokeStyle = '#7c5cff'; x.lineWidth = 2.5; x.globalAlpha = 0.85;
+  x.beginPath();
+  rows.forEach((r, i) => { const px = X(i), py = YA(r.a); i ? x.lineTo(px, py) : x.moveTo(px, py); });
+  x.stroke(); x.globalAlpha = 1;
+
+  // score line
+  x.beginPath();
+  rows.forEach((r, i) => { const px = X(i), py = Y(r.s); i ? x.lineTo(px, py) : x.moveTo(px, py); });
+  x.strokeStyle = '#2dd4bf'; x.lineWidth = 3.5; x.lineJoin = 'round'; x.lineCap = 'round';
+  x.stroke();
+
+  // dots
+  rows.forEach((r, i) => {
+    x.beginPath(); x.arc(X(i), Y(r.s), 4, 0, Math.PI*2);
+    x.fillStyle = '#2dd4bf'; x.fill();
+    x.strokeStyle = '#0d1117'; x.lineWidth = 2; x.stroke();
+  });
+
+  // legend
+  x.font = '15px "Segoe UI",sans-serif'; x.textAlign = 'left'; x.textBaseline = 'middle';
+  x.fillStyle = '#2dd4bf'; x.fillRect(padL, 12, 16, 4);
+  x.fillStyle = '#8b949e'; x.fillText('score', padL + 24, 14);
+  x.fillStyle = '#7c5cff'; x.fillRect(padL + 100, 12, 16, 4);
+  x.fillStyle = '#8b949e'; x.fillText('accuracy', padL + 124, 14);
+  x.fillStyle = '#8b949e';
+  x.fillText('last ' + rows.length + ' runs →', CW - padR - 130, CH - 12);
+}
+
+function renderProgress(){
+  const sel = $('pMode');
+  if(sel && !sel.options.length){
+    sel.innerHTML = '<option value="all">All drills</option>' +
+      Object.entries(MODES).map(([k, m]) => '<option value="' + k + '">' + m.n + '</option>').join('');
+  }
+  const mode = sel ? sel.value : 'all';
+  const rows = HISTORY.filter(h => mode === 'all' || h.m === mode);
+  const recent = rows.slice(-10), prev = rows.slice(-20, -10);
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  const best = rows.length ? Math.max(...rows.map(r => r.s)) : 0;
+  const lastAvg = avg(recent.map(r => r.s));
+  const prevAvg = avg(prev.map(r => r.s));
+  const trend = prev.length ? (lastAvg - prevAvg) : 0;
+
+  $('pSub').textContent = rows.length + ' run' + (rows.length === 1 ? '' : 's') + ' logged' +
+    (mode !== 'all' ? ' · ' + MODES[mode].n : '');
+  const cards = [
+    ['Runs', rows.length, ''],
+    ['Best score', Math.round(best).toLocaleString(), 'good'],
+    ['Last 10 avg', Math.round(lastAvg).toLocaleString(), ''],
+    ['Avg accuracy', recent.length ? avg(recent.map(r => r.a)).toFixed(1) + '%' : '—', ''],
+    ['Avg reaction', recent.length ? Math.round(avg(recent.map(r => r.r))) + ' ms' : '—', ''],
+    ['Trend', prev.length ? ((trend >= 0 ? '▲ +' : '▼ ') + Math.round(trend).toLocaleString()) : '—',
+      prev.length ? (trend >= 0 ? 'good' : 'bad') : '']
+  ];
+  $('pStats').innerHTML = cards.map(c =>
+    '<div class="rstat"><div class="k">' + c[0] + '</div><div class="v ' + c[2] + '">' + c[1] + '</div></div>').join('');
+  drawChart();
+}
+
 /* ---------------- menu / settings wiring ---------------- */
-function hideAll(){ ['menu','settings','results','learn'].forEach(id => $(id).classList.add('hide')); }
+function hideAll(){ ['menu','settings','results','learn','progress'].forEach(id => $(id).classList.add('hide')); }
 function show(id){ hideAll(); $(id).classList.remove('hide'); }
 
 function renderModes(){
@@ -781,6 +919,13 @@ $('btnSettings').addEventListener('click', () => { syncSettingsUI(); show('setti
 $('btnCloseSettings').addEventListener('click', () => { saveSettings(); show('menu'); renderModes(); });
 $('btnLearn').addEventListener('click', () => show('learn'));
 $('btnCloseLearn').addEventListener('click', () => show('menu'));
+$('btnProgress').addEventListener('click', () => { show('progress'); renderProgress(); });
+$('btnResultsProgress').addEventListener('click', () => { show('progress'); renderProgress(); });
+$('btnCloseProgress').addEventListener('click', () => show('menu'));
+$('pMode').addEventListener('change', renderProgress);
+$('btnClearHist').addEventListener('click', () => {
+  if(confirm('Clear all progress history? Personal bests are kept.')){ HISTORY = []; saveHistory(); renderProgress(); }
+});
 $('btnReset').addEventListener('click', () => {
   if(confirm('Reset all personal bests?')){ BESTS = {}; saveBests(); renderModes(); syncSettingsUI(); }
 });
