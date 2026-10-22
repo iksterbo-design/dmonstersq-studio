@@ -29,3 +29,6 @@ __pycache__/
 
 # ---- transient test artifacts ----
 _c.js
+DMQ-Studio.apk
+apk-out/
+_release-notes.md

@@ -14,6 +14,8 @@ jobs:
   # ------------------------------------------------------------- native shell
   gradle-apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -72,6 +74,26 @@ jobs:
         with:
           name: dmq-studio-apk
           path: android/app/build/outputs/apk/**/*.apk
+
+      - name: Publish APK for one-tap download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then echo "No debug APK found - skipping release."; exit 0; fi
+          cp "$APK" ./DMQ-Studio.apk
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest ./DMQ-Studio.apk --clobber
+          else
+            gh release create latest \
+              --title "D MONSTERS Q STUDIO - Android APK" \
+              --notes "Auto-built from ${{ github.sha }}" \
+              --target main
+            gh release upload latest ./DMQ-Studio.apk --clobber
+          fi
+          echo "### :inbox_tray: One-tap Android download" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/latest/download/DMQ-Studio.apk" >> $GITHUB_STEP_SUMMARY
 
   # ------------------------------------------------------------- TWA from PWA
   twa-apk:
