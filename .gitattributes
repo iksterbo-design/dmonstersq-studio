@@ -1,0 +1,5 @@
+# Normalise line endings so the Linux CI build sees clean LF files.
+* text=auto eol=lf
+*.png binary
+*.jks binary
+*.keystore binary
