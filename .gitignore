@@ -32,3 +32,6 @@ _c.js
 DMQ-Studio.apk
 apk-out/
 _release-notes.md
+
+# overlay user config (created at runtime)
+overlay/overlay-config.json
