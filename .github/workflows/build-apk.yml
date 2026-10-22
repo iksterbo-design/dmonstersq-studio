@@ -10,6 +10,10 @@ on:
   push:
     tags: ['v*']
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 jobs:
   # ------------------------------------------------------------- native shell
   gradle-apk:
@@ -24,16 +28,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare Android SDK (preinstalled on ubuntu-latest)
+      # The Android SDK is preinstalled on ubuntu-latest; we only add what the
+      # build needs. The legacy `tools` package was removed from the SDK
+      # repository, and asking sdkmanager for it makes it exit non-zero.
+      - name: Install Android platforms + build-tools
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          SDKMGR=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
-          echo "sdkmanager: $SDKMGR"
-          if [ -n "$SDKMGR" ]; then
-            yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
-            "$SDKMGR" "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null 2>&1 || true
+          SDKMGR="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)"
+          if [ -z "$SDKMGR" ]; then
+            echo "no sdkmanager found under $ANDROID_HOME/cmdline-tools"
+            exit 1
           fi
+          echo "sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools"
 
       - uses: gradle/actions/setup-gradle@v3
         with:
@@ -73,6 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dmq-studio-apk
+          if-no-files-found: warn
           path: android/app/build/outputs/apk/**/*.apk
 
       - name: Publish APK for one-tap download
@@ -96,8 +107,11 @@ jobs:
           echo "https://github.com/${{ github.repository }}/releases/latest/download/DMQ-Studio.apk" >> $GITHUB_STEP_SUMMARY
 
   # ------------------------------------------------------------- TWA from PWA
+  # Best effort: Bubblewrap is archived upstream, so a failure here must never
+  # block the real APK above.
   twa-apk:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -110,13 +124,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare Android SDK (preinstalled on ubuntu-latest)
+      - name: Install Android platforms + build-tools
         run: |
-          SDKMGR=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
-          echo "sdkmanager: $SDKMGR"
+          SDKMGR="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)"
           if [ -n "$SDKMGR" ]; then
             yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
-            "$SDKMGR" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+            "$SDKMGR" --install "platforms;android-34" "build-tools;34.0.0" "platform-tools"
           fi
 
       - name: Install Bubblewrap
@@ -157,4 +170,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dmq-studio-twa-apk
+          if-no-files-found: warn
           path: '*.apk'
