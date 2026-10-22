@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<meta name="description" content="D MONSTERS Q STUDIO — AIM LAB: a browser aim trainer with gridshot, flick, precision, tracking and reaction modes. Fully offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icons/icon-192.png">
+<title>D MONSTERS Q STUDIO — AIM LAB</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --panel3:#111722; --line:#2a3140;
+    --txt:#e6edf3; --dim:#8b949e; --acc:#7c5cff; --acc2:#2dd4bf; --acc3:#ff7ac6;
+    --danger:#ff5c5c; --warn:#ffb454; --ok:#3fb950;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);
+       display:flex;flex-direction:column;height:100dvh;
+       padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  header{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--panel);
+         border-bottom:1px solid var(--line);flex-wrap:wrap;flex:0 0 auto;z-index:10}
+  .logo{font-weight:900;font-size:14px;letter-spacing:.6px;white-space:nowrap;
+        background:linear-gradient(90deg,var(--acc2),var(--acc),var(--acc3));
+        -webkit-background-clip:text;background-clip:text;color:transparent}
+  .badge{font-size:10px;background:var(--acc2);color:#04211d;border-radius:20px;padding:2px 8px;font-weight:800}
+  .spacer{flex:1}
+  .btn{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;
+       padding:6px 11px;cursor:pointer;font-size:12px;white-space:nowrap}
+  .btn:hover{border-color:var(--acc);color:#fff}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.ghost{background:transparent}
+  #stage{flex:1;position:relative;min-height:0;background:#070a0f}
+  #game{display:block;width:100%;height:100%;cursor:none;touch-action:none}
+  #hud{position:absolute;inset:0;pointer-events:none;padding:14px 18px;
+       display:flex;justify-content:space-between;align-items:flex-start;font-variant-numeric:tabular-nums}
+  .hudcol{display:flex;flex-direction:column;gap:4px}
+  .hudcol.right{align-items:flex-end}
+  .big{font-size:32px;font-weight:800;line-height:1;text-shadow:0 2px 12px #000a}
+  .lbl{font-size:10px;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
+  .stat{font-size:15px;font-weight:700}
+  #timer{font-size:26px;font-weight:800;color:var(--acc2);text-shadow:0 2px 12px #000a}
+  #combo{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);
+         font-size:54px;font-weight:900;color:var(--acc3);opacity:0;pointer-events:none;
+         text-shadow:0 4px 30px #ff7ac680;transition:none}
+  .overlay{position:absolute;inset:0;background:#0d1117ee;backdrop-filter:blur(6px);
+           display:flex;align-items:center;justify-content:center;padding:20px;z-index:20;overflow-y:auto}
+  .overlay.hide{display:none}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+        padding:22px;max-width:560px;width:100%;box-shadow:0 20px 60px #000a}
+  .card h1{font-size:22px;margin:0 0 4px;
+           background:linear-gradient(90deg,var(--acc2),var(--acc),var(--acc3));
+           -webkit-background-clip:text;background-clip:text;color:transparent}
+  .card .sub{color:var(--dim);font-size:12.5px;margin-bottom:16px}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:16px}
+  .mode{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px;
+        cursor:pointer;text-align:left;color:inherit;font-family:inherit;transition:.13s}
+  .mode:hover{border-color:var(--acc);transform:translateY(-1px)}
+  .mode.sel{border-color:var(--acc2);box-shadow:0 0 0 2px #2dd4bf33}
+  .mode .n{font-weight:800;font-size:14px;margin-bottom:2px}
+  .mode .d{font-size:11px;color:var(--dim);line-height:1.35}
+  .mode .b{font-size:10px;color:var(--acc2);margin-top:5px;font-weight:700}
+  .setrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin:8px 0}
+  .setrow label{min-width:96px}
+  .setrow input[type=range]{flex:1;accent-color:var(--acc)}
+  .setrow input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--line);
+                            border-radius:6px;background:#0a0e14}
+  .setrow select{background:#0a0e14;border:1px solid var(--line);color:var(--txt);
+                 border-radius:6px;padding:4px 7px;font-size:12px;flex:1}
+  .setrow .v{min-width:40px;text-align:right;font-family:Consolas,monospace;color:var(--txt)}
+  .results{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .rstat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px}
+  .rstat .k{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+  .rstat .v{font-size:22px;font-weight:800;margin-top:3px}
+  .rstat .v.good{color:var(--acc2)} .rstat .v.bad{color:var(--warn)}
+  .pb{background:linear-gradient(135deg,#2dd4bf22,#7c5cff22);border:1px solid var(--acc2);
+      border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;color:var(--acc2);
+      text-align:center;margin-bottom:12px}
+  .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+  .actions .btn{flex:1;min-width:120px;text-align:center;padding:11px;font-size:13px;font-weight:600}
+  .learn{font-size:12.5px;line-height:1.65;color:var(--dim);max-height:0;overflow:hidden;transition:max-height .3s}
+  .learn.open{max-height:2000px}
+  .learn h3{color:var(--acc2);font-size:12px;letter-spacing:.6px;text-transform:uppercase;margin:14px 0 5px}
+  .learn b{color:var(--txt)}
+  .learn ul{padding-left:18px;margin:6px 0}
+  .learn li{margin:4px 0}
+  .safe{background:#0a2a12;border-left:3px solid var(--ok);border-radius:8px;
+        padding:10px 12px;font-size:12px;color:#9be8b4;margin-top:12px}
+  @media(max-width:560px){
+    .big{font-size:24px} #timer{font-size:20px} .results{grid-template-columns:1fr}
+    .logo{font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">D MONSTERS Q STUDIO</div>
+  <div class="badge">AIM LAB</div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="btnLearn">❓ How cheats get caught</button>
+  <button class="btn" id="btnSettings">⚙ Settings</button>
+  <button class="btn primary" id="btnMenu">☰ Modes</button>
+</header>
+
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hudcol">
+      <div class="lbl">Score</div>
+      <div class="big" id="score">0</div>
+      <div class="lbl" style="margin-top:6px">Accuracy</div>
+      <div class="stat" id="acc">—</div>
+    </div>
+    <div class="hudcol right">
+      <div id="timer">—</div>
+      <div class="lbl" style="margin-top:6px">Hits / Miss</div>
+      <div class="stat" id="hm">0 / 0</div>
+      <div class="lbl" style="margin-top:6px">Reaction</div>
+      <div class="stat" id="react">—</div>
+    </div>
+  </div>
+  <div id="combo"></div>
+
+  <!-- MODE SELECT -->
+  <div class="overlay" id="menu">
+    <div class="card">
+      <h1>AIM LAB</h1>
+      <div class="sub">Pick a drill. 100% offline, nothing leaves your device.</div>
+      <div class="modes" id="modeList"></div>
+      <div class="actions">
+        <button class="btn primary" id="btnStart">▶ Start drill</button>
+      </div>
+      <div class="safe">
+        ✅ This is a <b>trainer</b>, not a cheat. It runs in its own window and never touches
+        another game's memory or network. Your aim gets better; nobody else's match gets ruined.
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="overlay hide" id="settings">
+    <div class="card">
+      <h1>SETTINGS</h1>
+      <div class="sub">Tune it to match your in-game sens.</div>
+      <div class="setrow"><label>Target size</label><input type="range" id="sSize" min="14" max="90" step="1"><span class="v" id="vSize"></span></div>
+      <div class="setrow"><label>Targets</label><input type="range" id="sCount" min="1" max="12" step="1"><span class="v" id="vCount"></span></div>
+      <div class="setrow"><label>Duration</label><input type="range" id="sDur" min="15" max="120" step="5"><span class="v" id="vDur"></span></div>
+      <div class="setrow"><label>Crosshair</label>
+        <select id="sCross">
+          <option value="cross">Cross</option>
+          <option value="dot">Dot</option>
+          <option value="circle">Circle</option>
+          <option value="crossdot">Cross + dot</option>
+        </select></div>
+      <div class="setrow"><label>Crosshair size</label><input type="range" id="sCrossSize" min="4" max="40" step="1"><span class="v" id="vCrossSize"></span></div>
+      <div class="setrow"><label>Colour</label><input type="color" id="sColor"></div>
+      <div class="setrow"><label>Sound</label><select id="sSound"><option value="1">On</option><option value="0">Off</option></select></div>
+      <div class="setrow"><label>Target motion</label><select id="sMove"><option value="0">Static</option><option value="1">Drifting</option></select></div>
+      <div class="actions">
+        <button class="btn" id="btnReset">↺ Reset scores</button>
+        <button class="btn primary" id="btnCloseSettings">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="overlay hide" id="results">
+    <div class="card">
+      <h1 id="rTitle">DRILL COMPLETE</h1>
+      <div class="sub" id="rMode"></div>
+      <div id="pbBox"></div>
+      <div class="results" id="rStats"></div>
+      <div class="actions">
+        <button class="btn primary" id="btnAgain">↻ Again</button>
+        <button class="btn" id="btnBackMenu">☰ Modes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEARN -->
+  <div class="overlay hide" id="learn">
+    <div class="card">
+      <h1>HOW AIMBOTS WORK — AND WHY THEY GET BANNED</h1>
+      <div class="sub">The interesting part, without the ban.</div>
+      <div class="learn open">
+        <h3>1. The vision pipeline</h3>
+        A modern aimbot doesn't read the game's memory first — it <b>looks at the screen</b>.
+        It grabs frames (10–60 fps), runs a neural net (YOLO/ONNX) to find player-shaped
+        blobs, then computes an angle from screen centre to the target's bounding box.
+        <ul>
+          <li><b>Screen capture</b> — fast framebuffer grab (DXGI Desktop Duplication / X11 capture)</li>
+          <li><b>Inference</b> — a small CNN, a few ms per frame on a decent GPU</li>
+          <li><b>Target selection</b> — nearest to crosshair, or "most dangerous"</li>
+          <li><b>Output</b> — a mouse delta, injected via SendInput / uinput / a driver</li>
+        </ul>
+
+        <h3>2. Why it looks superhuman — and that's the flaw</h3>
+        Real humans have <b>noisy</b> aim. Reaction time is 150–250 ms and varies every time.
+        Human flicks <b>overshoot and correct</b>. An aimbot moves in a clean curve, at a
+        machine-consistent speed, with a variance near zero.
+        <br><br>
+        Anti-cheat doesn't need to see the cheat. It measures <b>you</b>.
+
+        <h3>3. What anti-cheat actually measures</h3>
+        <ul>
+          <li><b>Reaction-time distribution</b> — humans form a bell curve. A bot's is a spike at ~0 ms. Instantly suspicious.</li>
+          <li><b>Input entropy</b> — human mouse paths have jitter. Bot paths are near-perfectly smooth. Low entropy = machine.</li>
+          <li><b>Angle-to-target correlation</b> — if your crosshair snaps to a head hitbox far more often than chance, the statistics scream.</li>
+          <li><b>Timing regularity</b> — bots fire on a rhythm. Humans don't.</li>
+          <li><b>Perfect tracking through walls/occlusion</b> — a bot keeps tracking a target it can't see.</li>
+          <li><b>Kernel-level telemetry</b> — signed drivers (Vanguard, EAC, BattlEye) see handles, hooks and injected DLLs.</li>
+        </ul>
+
+        <h3>4. The arms race</h3>
+        Cheat devs respond with <b>humanisation</b>: adding jitter, random reaction delays,
+        bezier-curved flicks, and misses. But every humanisation is a statistical fingerprint
+        too — a bot that's "random in exactly the right way" is still not random like a human.
+        This is a genuinely hard <b>adversarial ML</b> problem, and it's why anti-cheat
+        engineers get paid well.
+
+        <h3>5. The honest conclusion</h3>
+        Aimbots for online multiplayer get you banned, ruin the lobby, and the tech is
+        <b>the exact same computer vision</b> you can build legally for:
+        sports analysis, robotics, accessibility, wildlife cameras, your own game dev,
+        or the aim trainer you're using right now.
+        <br><br>
+        <b>Same skills. No ban. Actually employable.</b>
+
+        <div class="safe" style="margin-top:16px">
+          🎯 Want to go deeper? The next step is a real CV project: capture your own screen,
+          train a small detector on your own images, and draw boxes on it. I can build that with you —
+          it's the same pipeline, aimed at something you own.
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnCloseLearn">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   D MONSTERS Q STUDIO — AIM LAB
+   A browser aim trainer. 100% offline, no network code at all.
+   Modes: Gridshot · Flick · Precision · Tracking · Reaction
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const canvas = $('game'), ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const r = canvas.getBoundingClientRect();
+  W = r.width; H = r.height;
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+/* ---------------- audio (tiny synth clicks) ---------------- */
+let actx = null;
+function click(freq, dur, type, vol){
+  if(!S.sound) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol || 0.08, actx.currentTime + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + (dur || 0.07));
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + (dur || 0.07) + 0.02);
+  }catch(e){}
+}
+
+/* ---------------- modes ---------------- */
+const MODES = {
+  gridshot:  { n:'Gridshot',  d:'Several targets at once — click them as fast as you can.', size:48, count:6, dur:60, t:'scored' },
+  flick:     { n:'Flick',     d:'One target at a time. Snap to it and click.',              size:44, count:1, dur:60, t:'scored' },
+  precision: { n:'Precision', d:'Small targets, several up. Make every shot count.',        size:22, count:3, dur:60, t:'scored' },
+  tracking:  { n:'Tracking',  d:'Hold the crosshair on a drifting target. Time on target scores.', size:80, count:1, dur:45, t:'track' },
+  reaction:  { n:'Reaction',  d:'20 trials. Pure reaction time — no time limit.',           size:60, count:1, dur:0,  t:'react' }
+};
+
+/* ---------------- state ---------------- */
+const S = {
+  mode:'gridshot', running:false, over:false,
+  score:0, hits:0, misses:0, combo:0, bestCombo:0, reactions:[], shots:[],
+  targets:[], particles:[], pops:[],
+  tLeft:0, tElapsed:0,
+  mouse:{x:0,y:0},
+  trackTime:0, lastFrame:0,
+  trial:0, trials:20, waiting:false, waitUntil:0, spawnedAt:0,
+  // settings
+  size:null, count:null, dur:null,
+  cross:'crossdot', crossSize:14, color:'#2dd4bf', sound:true, move:false
+};
+try{ Object.assign(S, JSON.parse(localStorage.getItem('dmq-aim-settings') || '{}')); }catch(e){}
+let BESTS = {};
+try{ BESTS = JSON.parse(localStorage.getItem('dmq-aim-bests') || '{}'); }catch(e){}
+
+function saveSettings(){
+  const o = { size:S.size, count:S.count, dur:S.dur, cross:S.cross, crossSize:S.crossSize,
+              color:S.color, sound:S.sound, move:S.move };
+  try{ localStorage.setItem('dmq-aim-settings', JSON.stringify(o)); }catch(e){}
+}
+function saveBests(){ try{ localStorage.setItem('dmq-aim-bests', JSON.stringify(BESTS)); }catch(e){} }
+
+function applyMode(m){
+  S.mode = m;
+  const M = MODES[m];
+  if(S.size == null) S.size = M.size;
+  if(S.count == null) S.count = M.count;
+  if(S.dur == null) S.dur = M.dur;
+}
+
+/* ---------------- targets ---------------- */
+function randPos(r){
+  const pad = r + 14;
+  return { x: pad + Math.random() * Math.max(1, W - pad*2),
+           y: pad + 14 + Math.random() * Math.max(1, H - pad*2 - 28) };
+}
+function makeTarget(){
+  const r = (S.size != null ? S.size : 44) / 2;
+  const p = randPos(r);
+  const t = { x:p.x, y:p.y, r, born:performance.now(), life:0, alive:true,
+              vx:0, vy:0, hue: (S.mode==='precision' ? 275 : 165) };
+  if(S.move){
+    const sp = 40 + Math.random()*70, a = Math.random()*Math.PI*2;
+    t.vx = Math.cos(a)*sp; t.vy = Math.sin(a)*sp;
+  }
+  return t;
+}
+function spawn(count){
+  S.targets = [];
+  for(let i=0;i<count;i++) S.targets.push(makeTarget());
+}
+function respawn(t){
+  const r = t.r, p = randPos(r);
+  t.x = p.x; t.y = p.y; t.born = performance.now();
+  if(S.move){
+    const sp = 40 + Math.random()*70, a = Math.random()*Math.PI*2;
+    t.vx = Math.cos(a)*sp; t.vy = Math.sin(a)*sp;
+  }
+}
+
+/* ---------------- effects ---------------- */
+function burst(x, y, color){
+  for(let i=0;i<12;i++){
+    const a = Math.random()*Math.PI*2, sp = 60 + Math.random()*260;
+    S.particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp,
+                       life:1, r:1.5 + Math.random()*2.5, c:color });
+  }
+}
+function popText(x, y, txt, color){
+  S.pops.push({ x, y, txt, color, life:1 });
+}
+
+/* ---------------- flow ---------------- */
+function startDrill(){
+  const M = MODES[S.mode];
+  S.running = true; S.over = false;
+  S.score = 0; S.hits = 0; S.misses = 0; S.combo = 0; S.bestCombo = 0;
+  S.reactions = []; S.shots = []; S.particles = []; S.pops = [];
+  S.tLeft = (S.dur != null ? S.dur : M.dur); S.tElapsed = 0;
+  S.trackTime = 0; S.trial = 0; S.waiting = false; S.spawnedAt = 0;
+  S.lastFrame = performance.now();
+  hideAll();
+  if(M.t === 'react'){ S.targets = []; nextTrial(0); }
+  else spawn(S.count != null ? S.count : M.count);
+  updateHUD();
+}
+function endDrill(){
+  if(!S.running) return;
+  S.running = false; S.over = true;
+  showResults();
+}
+function nextTrial(delay){
+  S.waiting = true;
+  S.waitUntil = performance.now() + (delay || (800 + Math.random()*1700));
+}
+
+/* ---------------- input ---------------- */
+function pos(e){
+  const r = canvas.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+  return { x: cx - r.left, y: cy - r.top };
+}
+canvas.addEventListener('mousemove', e => { const p = pos(e); S.mouse.x = p.x; S.mouse.y = p.y; });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = pos(e); S.mouse.x = p.x; S.mouse.y = p.y; }, {passive:false});
+canvas.addEventListener('mousedown', e => { e.preventDefault(); shoot(pos(e)); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = pos(e); S.mouse.x=p.x; S.mouse.y=p.y; shoot(p); }, {passive:false});
+
+function shoot(p){
+  if(!S.running) return;
+  const M = MODES[S.mode];
+  S.shots.push(performance.now());
+
+  // reaction mode: only valid when a target is up
+  if(M.t === 'react'){
+    if(S.waiting || !S.targets.length){ S.misses++; S.combo = 0; click(180,0.05,'sawtooth',0.05); updateHUD(); return; }
+    const t = S.targets[0];
+    const d = Math.hypot(p.x - t.x, p.y - t.y);
+    if(d <= t.r){
+      const rt = performance.now() - S.spawnedAt;
+      S.reactions.push(rt);
+      S.hits++; S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo);
+      S.score += Math.max(50, Math.round(1200 - rt));
+      burst(t.x, t.y, '#2dd4bf');
+      popText(t.x, t.y - 20, Math.round(rt) + 'ms', '#2dd4bf');
+      click(880, 0.05, 'square', 0.07);
+      S.targets = [];
+      S.trial++;
+      updateHUD();
+      if(S.trial >= S.trials) setTimeout(endDrill, 260);
+      else nextTrial();
+    } else {
+      S.misses++; S.combo = 0; click(180,0.05,'sawtooth',0.05); updateHUD();
+    }
+    return;
+  }
+
+  // scored / track modes
+  let hit = false;
+  for(let i=0;i<S.targets.length;i++){
+    const t = S.targets[i];
+    if(!t.alive) continue;
+    if(Math.hypot(p.x - t.x, p.y - t.y) <= t.r){
+      hit = true;
+      const rt = performance.now() - t.born;
+      S.reactions.push(rt);
+      S.hits++; S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo);
+      const sizeBonus = Math.round(60 * (44 / t.r));
+      const pts = 100 + sizeBonus + S.combo * 5;
+      S.score += pts;
+      burst(t.x, t.y, '#2dd4bf');
+      popText(t.x, t.y - 18, '+' + pts, '#2dd4bf');
+      click(760 + Math.min(S.combo, 12) * 30, 0.05, 'square', 0.07);
+      if(M.t === 'track'){ respawn(t); }
+      else if((S.count != null ? S.count : M.count) <= 1){ respawn(t); }
+      else { t.alive = false; setTimeout(() => { respawn(t); t.alive = true; }, 180); }
+      break;
+    }
+  }
+  if(!hit){
+    S.misses++; S.combo = 0;
+    click(170, 0.06, 'sawtooth', 0.05);
+    popText(p.x, p.y, 'miss', '#ff5c5c');
+  }
+  updateHUD();
+}
+
+/* ---------------- update ---------------- */
+function update(dt){
+  if(!S.running) return;
+  const M = MODES[S.mode];
+  S.tElapsed += dt;
+  if(M.t !== 'react'){
+    S.tLeft -= dt;
+    if(S.tLeft <= 0){ S.tLeft = 0; endDrill(); return; }
+  }
+
+  // reaction spawn timing
+  if(M.t === 'react' && S.waiting && performance.now() >= S.waitUntil){
+    S.waiting = false;
+    S.targets = [makeTarget()];
+    S.spawnedAt = performance.now();
+  }
+
+  // target drift
+  if(S.move){
+    for(const t of S.targets){
+      t.x += t.vx * dt; t.y += t.vy * dt;
+      if(t.x < t.r + 6){ t.x = t.r + 6; t.vx *= -1; }
+      if(t.x > W - t.r - 6){ t.x = W - t.r - 6; t.vx *= -1; }
+      if(t.y < t.r + 6){ t.y = t.r + 6; t.vy *= -1; }
+      if(t.y > H - t.r - 6){ t.y = H - t.r - 6; t.vy *= -1; }
+    }
+  }
+
+  // tracking score
+  if(M.t === 'track' && S.targets.length){
+    const t = S.targets[0];
+    const on = Math.hypot(S.mouse.x - t.x, S.mouse.y - t.y) <= t.r;
+    if(on){ S.trackTime += dt; S.score += dt * 120; }
+  }
+
+  // particles / pops
+  for(const p of S.particles){
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 320*dt; p.vx *= 0.97; p.life -= dt*1.8;
+  }
+  S.particles = S.particles.filter(p => p.life > 0);
+  for(const p of S.pops){ p.y -= 42*dt; p.life -= dt*1.5; }
+  S.pops = S.pops.filter(p => p.life > 0);
+}
+
+/* ---------------- render ---------------- */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // subtle grid
+  ctx.strokeStyle = '#ffffff07'; ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=64){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=64){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // targets
+  for(const t of S.targets){
+    if(!t.alive) continue;
+    const g = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.r);
+    const c1 = S.mode === 'precision' ? '#c85cff' : '#2dd4bf';
+    const c2 = S.mode === 'precision' ? '#7c5cff' : '#0d9488';
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#ffffff55'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(t.x, t.y, t.r - 1, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = '#ffffffcc';
+    ctx.beginPath(); ctx.arc(t.x, t.y, Math.max(1.5, t.r*0.14), 0, Math.PI*2); ctx.fill();
+  }
+
+  // particles
+  for(const p of S.particles){
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // popups
+  ctx.textAlign = 'center'; ctx.font = 'bold 15px "Segoe UI",sans-serif';
+  for(const p of S.pops){
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.fillText(p.txt, p.x, p.y);
+  }
+  ctx.globalAlpha = 1;
+
+  // crosshair
+  drawCross(S.mouse.x, S.mouse.y);
+}
+
+function drawCross(x, y){
+  const s = S.crossSize, col = S.color;
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2;
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+  if(S.cross === 'dot' || S.cross === 'crossdot'){
+    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI*2); ctx.fill();
+  }
+  if(S.cross === 'cross' || S.cross === 'crossdot'){
+    const g = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - s, y); ctx.lineTo(x - g, y);
+    ctx.moveTo(x + g, y); ctx.lineTo(x + s, y);
+    ctx.moveTo(x, y - s); ctx.lineTo(x, y - g);
+    ctx.moveTo(x, y + g); ctx.lineTo(x, y + s);
+    ctx.stroke();
+  }
+  if(S.cross === 'circle'){
+    ctx.beginPath(); ctx.arc(x, y, s * 0.7, 0, Math.PI*2); ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+}
+
+/* ---------------- HUD ---------------- */
+function updateHUD(){
+  $('score').textContent = Math.round(S.score).toLocaleString();
+  const shots = S.hits + S.misses;
+  $('acc').textContent = shots ? Math.round(S.hits / shots * 100) + '%' : '—';
+  $('hm').textContent = S.hits + ' / ' + S.misses;
+  const rs = S.reactions;
+  $('react').textContent = rs.length ? Math.round(rs.reduce((a,b)=>a+b,0)/rs.length) + ' ms' : '—';
+  const M = MODES[S.mode];
+  if(M.t === 'react') $('timer').textContent = (S.trial) + '/' + S.trials;
+  else $('timer').textContent = Math.ceil(S.tLeft) + 's';
+  if(S.combo >= 3){
+    const el = $('combo');
+    el.textContent = S.combo + '× COMBO';
+    el.style.opacity = 1;
+    el.style.transform = 'translate(-50%,-50%) scale(' + (1 + Math.min(S.combo,20)*0.02) + ')';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = 0; }, 380);
+  }
+}
+
+/* ---------------- results ---------------- */
+function showResults(){
+  const M = MODES[S.mode];
+  const shots = S.hits + S.misses;
+  const acc = shots ? S.hits / shots * 100 : 0;
+  const avg = S.reactions.length ? S.reactions.reduce((a,b)=>a+b,0)/S.reactions.length : 0;
+  const key = S.mode;
+  const prev = BESTS[key];
+  const isPB = !prev || S.score > prev.score;
+  if(isPB) BESTS[key] = { score: Math.round(S.score), acc: +acc.toFixed(1), react: Math.round(avg) };
+  saveBests();
+
+  $('rMode').textContent = M.n + ' — ' + M.d;
+  $('pbBox').innerHTML = isPB
+    ? '<div class="pb">🏆 NEW PERSONAL BEST!</div>'
+    : (prev ? '<div class="pb" style="background:#161b22;border-color:#2a3140;color:#8b949e">Best: ' +
+        prev.score.toLocaleString() + ' pts · ' + prev.acc + '% · ' + prev.react + ' ms</div>' : '');
+
+  const rows = [
+    ['Score', Math.round(S.score).toLocaleString(), isPB ? 'good' : ''],
+    ['Accuracy', shots ? acc.toFixed(1) + '%' : '—', acc >= 60 ? 'good' : (shots ? 'bad' : '')],
+    ['Avg reaction', S.reactions.length ? Math.round(avg) + ' ms' : '—', avg && avg < 400 ? 'good' : ''],
+    ['Hits', S.hits, ''],
+    ['Misses', S.misses, S.misses > S.hits ? 'bad' : ''],
+    ['Best combo', S.bestCombo + '×', S.bestCombo >= 10 ? 'good' : '']
+  ];
+  if(M.t === 'track') rows[0] = ['Time on target', S.trackTime.toFixed(1) + ' s', 'good'];
+  $('rStats').innerHTML = rows.map(r =>
+    '<div class="rstat"><div class="k">' + r[0] + '</div><div class="v ' + r[2] + '">' + r[1] + '</div></div>').join('');
+
+  $('results').classList.remove('hide');
+}
+
+/* ---------------- menu / settings wiring ---------------- */
+function hideAll(){ ['menu','settings','results','learn'].forEach(id => $(id).classList.add('hide')); }
+function show(id){ hideAll(); $(id).classList.remove('hide'); }
+
+function renderModes(){
+  const wrap = $('modeList');
+  wrap.innerHTML = Object.entries(MODES).map(([k,m]) => {
+    const b = BESTS[k];
+    return '<button class="mode' + (k===S.mode?' sel':'') + '" data-m="' + k + '">' +
+      '<div class="n">' + m.n + '</div><div class="d">' + m.d + '</div>' +
+      (b ? '<div class="b">best ' + b.score.toLocaleString() + '</div>' : '<div class="b">no score yet</div>') +
+      '</button>';
+  }).join('');
+  wrap.querySelectorAll('.mode').forEach(el => {
+    el.addEventListener('click', () => {
+      const m = el.dataset.m;
+      S.mode = m;
+      const M = MODES[m];
+      S.size = M.size; S.count = M.count; S.dur = M.dur;
+      saveSettings(); syncSettingsUI(); renderModes();
+    });
+  });
+}
+
+function syncSettingsUI(){
+  const M = MODES[S.mode];
+  const size = S.size != null ? S.size : M.size;
+  const count = S.count != null ? S.count : M.count;
+  const dur = S.dur != null ? S.dur : M.dur;
+  $('sSize').value = size;   $('vSize').textContent = size;
+  $('sCount').value = count; $('vCount').textContent = count;
+  $('sDur').value = dur || 45; $('vDur').textContent = dur ? dur + 's' : 'n/a';
+  $('sCross').value = S.cross;
+  $('sCrossSize').value = S.crossSize; $('vCrossSize').textContent = S.crossSize;
+  $('sColor').value = S.color;
+  $('sSound').value = S.sound ? '1' : '0';
+  $('sMove').value = S.move ? '1' : '0';
+}
+
+$('btnMenu').addEventListener('click', () => { S.running = false; renderModes(); show('menu'); });
+$('btnStart').addEventListener('click', startDrill);
+$('btnAgain').addEventListener('click', startDrill);
+$('btnBackMenu').addEventListener('click', () => { renderModes(); show('menu'); });
+$('btnSettings').addEventListener('click', () => { syncSettingsUI(); show('settings'); });
+$('btnCloseSettings').addEventListener('click', () => { saveSettings(); show('menu'); renderModes(); });
+$('btnLearn').addEventListener('click', () => show('learn'));
+$('btnCloseLearn').addEventListener('click', () => show('menu'));
+$('btnReset').addEventListener('click', () => {
+  if(confirm('Reset all personal bests?')){ BESTS = {}; saveBests(); renderModes(); syncSettingsUI(); }
+});
+
+$('sSize').addEventListener('input', e => { S.size = +e.target.value; $('vSize').textContent = S.size; saveSettings(); });
+$('sCount').addEventListener('input', e => { S.count = +e.target.value; $('vCount').textContent = S.count; saveSettings(); });
+$('sDur').addEventListener('input', e => { S.dur = +e.target.value; $('vDur').textContent = S.dur + 's'; saveSettings(); });
+$('sCross').addEventListener('change', e => { S.cross = e.target.value; saveSettings(); });
+$('sCrossSize').addEventListener('input', e => { S.crossSize = +e.target.value; $('vCrossSize').textContent = S.crossSize; saveSettings(); });
+$('sColor').addEventListener('input', e => { S.color = e.target.value; saveSettings(); });
+$('sSound').addEventListener('change', e => { S.sound = e.target.value === '1'; saveSettings(); });
+$('sMove').addEventListener('change', e => { S.move = e.target.value === '1'; saveSettings(); });
+
+window.addEventListener('keydown', e => {
+  if(e.code === 'Escape'){ if(S.running){ S.running = false; renderModes(); show('menu'); } else show('menu'); }
+  if(e.code === 'Space' && !S.running){ e.preventDefault(); startDrill(); }
+});
+
+/* ---------------- main loop ---------------- */
+function loop(now){
+  const dt = Math.min(0.05, (now - S.lastFrame) / 1000 || 0);
+  S.lastFrame = now;
+  update(dt);
+  draw();
+  if(S.running) updateHUD();
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- boot ---------------- */
+resize();
+applyMode(S.mode);
+if(S.size == null){ const M = MODES[S.mode]; S.size = M.size; S.count = M.count; S.dur = M.dur; }
+S.mouse.x = W/2; S.mouse.y = H/2;
+renderModes();
+syncSettingsUI();
+updateHUD();
+requestAnimationFrame(loop);
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+console.log('[DMQ AIM LAB] ready —', W + 'x' + H);
+</script>
+</body>
+</html>
