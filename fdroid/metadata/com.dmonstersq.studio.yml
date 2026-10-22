@@ -2,10 +2,10 @@ Categories:
   - Multimedia
 License: MIT
 AuthorName: D Monsters Q
-WebSite: https://YOURUSERNAME.github.io/dmonstersq-studio/
-SourceCode: https://github.com/YOURUSERNAME/dmonstersq-studio
-IssueTracker: https://github.com/YOURUSERNAME/dmonstersq-studio/issues
-Changelog: https://github.com/YOURUSERNAME/dmonstersq-studio/releases
+WebSite: https://iksterbo-design.github.io/dmonstersq-studio/
+SourceCode: https://github.com/iksterbo-design/dmonstersq-studio
+IssueTracker: https://github.com/iksterbo-design/dmonstersq-studio/issues
+Changelog: https://github.com/iksterbo-design/dmonstersq-studio/releases
 
 AutoName: DMQ Studio
 Summary: 31-tool multitrack audio mixing and editing studio
@@ -31,7 +31,7 @@ Description: |-
   origin; it does not need a network connection to work.
 
 RepoType: git
-Repo: https://github.com/YOURUSERNAME/dmonstersq-studio.git
+Repo: https://github.com/iksterbo-design/dmonstersq-studio.git
 
 Builds:
   - versionName: 3.0.0

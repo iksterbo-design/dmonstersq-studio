@@ -37,12 +37,12 @@ This is the best fit for a Web Audio app. It installs like a real app, runs full
 cd dmonstersq-studio
 git init && git add -A && git commit -m "DMQ Studio v3"
 git branch -M main
-git remote add origin https://github.com/YOURUSERNAME/dmonstersq-studio.git
+git remote add origin https://github.com/iksterbo-design/dmonstersq-studio.git
 git push -u origin main
 ```
 
 Then on GitHub: **Settings → Pages → Source: `main` / root → Save**.
-Your URL becomes `https://YOURUSERNAME.github.io/dmonstersq-studio/`.
+Your URL becomes `https://iksterbo-design.github.io/dmonstersq-studio/`.
 
 **2. On your Android phone:**
 
@@ -129,7 +129,7 @@ fdroid server update            # or just commit + push the ./repo and ./metadat
 
 Host the resulting `repo/` + `index-v1.jar` on GitHub Pages, then on the phone:
 
-> **F-Droid → Settings → Repositories → ➕ → `https://YOURUSERNAME.github.io/dmq-fdroid/repo`**
+> **F-Droid → Settings → Repositories → ➕ → `https://iksterbo-design.github.io/dmq-fdroid/repo`**
 
 F-Droid will now show **DMQ Studio** and offer updates. This is the DIY route and needs nobody's approval.
 
