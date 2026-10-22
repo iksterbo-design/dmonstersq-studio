@@ -1,0 +1,49 @@
+Categories:
+  - Multimedia
+License: MIT
+AuthorName: D Monsters Q
+WebSite: https://YOURUSERNAME.github.io/dmonstersq-studio/
+SourceCode: https://github.com/YOURUSERNAME/dmonstersq-studio
+IssueTracker: https://github.com/YOURUSERNAME/dmonstersq-studio/issues
+Changelog: https://github.com/YOURUSERNAME/dmonstersq-studio/releases
+
+AutoName: DMQ Studio
+Summary: 31-tool multitrack audio mixing and editing studio
+Description: |-
+  D MONSTERS Q STUDIO is a multitrack audio mixing and editing
+  studio that runs entirely on-device. Nothing is uploaded, there is
+  no network code at all, and no account is required.
+
+  It offers 31 tools, including 3-band EQ, low/high-pass filters,
+  drive, compressor, noise gate, bitcrusher, tremolo, auto-pan,
+  reverb, delay, pitch shifting, reverse, normalize, split,
+  duplicate, trim-silence, auto-level, quick fades, track colours,
+  a metronome with tap tempo, a loop region, a master limiter,
+  a spectrum analyser, master EQ and high-pass, undo/redo, project
+  save/load, microphone recording and WAV export.
+
+  Audio is processed with the Web Audio API. The noise gate, bit
+  crusher and master limiter run as AudioWorklets on the audio
+  render thread. Export renders through an OfflineAudioContext and
+  writes a 16-bit PCM WAV.
+
+  The app ships as a local web bundle served from a secure in-app
+  origin; it does not need a network connection to work.
+
+RepoType: git
+Repo: https://github.com/YOURUSERNAME/dmonstersq-studio.git
+
+Builds:
+  - versionName: 3.0.0
+    versionCode: 3
+    commit: v3.0.0
+    subdir: android
+    gradle:
+      - yes
+    # The web bundle is committed under android/app/src/main/assets/www,
+    # so there is no prebuild step and the build is fully offline.
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 3.0.0
+CurrentVersionCode: 3

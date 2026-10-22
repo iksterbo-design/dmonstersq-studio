@@ -1,0 +1,27 @@
+{
+  "name": "D MONSTERS Q STUDIO",
+  "short_name": "DMQ Studio",
+  "description": "A 30-tool multitrack audio mixing and editing studio that runs entirely in your browser. Load, mix, edit, add FX and export WAV — no upload, no account, works offline.",
+  "id": "/dmonstersq-studio/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["music", "productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "file_handlers": [
+    { "action": "./index.html", "accept": { "audio/*": [".wav", ".mp3", ".ogg", ".m4a", ".flac", ".webm"] } }
+  ],
+  "shortcuts": [
+    { "name": "New session", "url": "./index.html" }
+  ]
+}

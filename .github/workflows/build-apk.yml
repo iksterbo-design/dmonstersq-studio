@@ -1,0 +1,123 @@
+name: Build Android APK
+
+# Two independent builds, both in the cloud (no local Java/SDK needed):
+#   * gradle-apk -> the real F-Droid-style Android project (installable debug APK)
+#   * twa-apk    -> a Trusted Web Activity generated from the hosted PWA
+# Trigger manually (Actions tab -> Run workflow) or on a version tag.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  # ------------------------------------------------------------- native shell
+  gradle-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.2'
+
+      - name: Sync the web bundle into the Android project
+        run: python3 sync_android_assets.py
+
+      - name: Decode release signing keystore (if configured)
+        env:
+          KS_B64: ${{ secrets.DMQ_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.DMQ_STORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.DMQ_KEY_ALIAS }}
+          KS_KEYPASS: ${{ secrets.DMQ_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/dmq-release.jks"
+            {
+              echo "DMQ_KEYSTORE=$RUNNER_TEMP/dmq-release.jks"
+              echo "DMQ_STORE_PASSWORD=$KS_PASS"
+              echo "DMQ_KEY_ALIAS=$KS_ALIAS"
+              echo "DMQ_KEY_PASSWORD=$KS_KEYPASS"
+            } >> "$GITHUB_ENV"
+            echo "Signing: ENABLED (secrets found)"
+          else
+            echo "Signing: DISABLED - release APK will be unsigned (F-Droid style)"
+          fi
+
+      - name: Build debug APK (debug-signed, directly installable)
+        run: cd android && gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Build release APK (unsigned, for F-Droid / your own signing)
+        run: cd android && gradle assembleRelease --no-daemon --stacktrace
+        continue-on-error: true
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmq-studio-apk
+          path: android/app/build/outputs/apk/**/*.apk
+
+  # ------------------------------------------------------------- TWA from PWA
+  twa-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Point twa-manifest at this repo's Pages URL
+        run: |
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+          node -e '
+            const fs=require("fs");
+            const f="twa-manifest.json";
+            const m=JSON.parse(fs.readFileSync(f,"utf8"));
+            const base=`https://${process.env.OWNER}.github.io/${process.env.REPO}`;
+            m.host=`${process.env.OWNER}.github.io`;
+            m.startUrl=`/${process.env.REPO}/index.html`;
+            m.webManifestUrl=`${base}/manifest.webmanifest`;
+            m.fullScopeUrl=`${base}/`;
+            m.iconUrl=`${base}/icons/icon-512.png`;
+            m.maskableIconUrl=`${base}/icons/icon-maskable-512.png`;
+            fs.writeFileSync(f, JSON.stringify(m,null,2));
+          '
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Generate signing key
+        run: |
+          keytool -genkeypair -v -keystore android.keystore \
+            -alias dmq -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass dmqstudio -keypass dmqstudio \
+            -dname "CN=DMQ Studio, OU=App, O=DMonstersQ, L=NA, S=NA, C=US"
+
+      - name: Build TWA APK
+        run: bubblewrap build --skipPwaValidation
+        continue-on-error: true
+
+      - name: Upload TWA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmq-studio-twa-apk
+          path: '*.apk'

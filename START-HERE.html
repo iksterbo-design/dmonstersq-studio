@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D MONSTERS Q STUDIO — START HERE</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--line:#2a3140;--txt:#e6edf3;
+        --dim:#8b949e;--acc:#7c5cff;--acc2:#2dd4bf;--acc3:#ff7ac6;--ok:#3fb950;--warn:#ffb454;--bad:#ff5c5c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif;
+       padding:28px 18px 60px;line-height:1.55}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:30px;margin:0 0 4px;letter-spacing:.5px;
+     background:linear-gradient(90deg,var(--acc2),var(--acc),var(--acc3));
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--dim);font-size:14px;margin-bottom:26px}
+  .apps{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:30px}
+  a.app{display:block;text-decoration:none;color:inherit;background:var(--panel);
+        border:1px solid var(--line);border-radius:14px;padding:20px;transition:.18s}
+  a.app:hover{border-color:var(--acc);transform:translateY(-2px)}
+  a.app .ic{font-size:30px;margin-bottom:8px}
+  a.app .t{font-weight:800;font-size:17px;margin-bottom:3px}
+  a.app .d{color:var(--dim);font-size:12.5px}
+  .pill{display:inline-block;font-size:10px;font-weight:700;border-radius:20px;padding:2px 9px;margin-left:6px}
+  .pill.ok{background:var(--ok);color:#04210b}
+  .pill.warn{background:var(--warn);color:#2a1a00}
+  .pill.no{background:var(--bad);color:#2a0000}
+  h2{font-size:14px;letter-spacing:.6px;color:var(--acc2);margin:30px 0 10px;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);
+        border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  td,th{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  code{background:#0a0e14;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px}
+  pre{background:#0a0e14;border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto;font-size:12.5px}
+  .note{background:var(--panel2);border-left:3px solid var(--warn);border-radius:8px;padding:12px 14px;
+        font-size:13px;margin:14px 0}
+  .note.ok{border-left-color:var(--ok)}
+  .note.bad{border-left-color:var(--bad)}
+  .muted{color:var(--dim);font-size:12.5px}
+  ul{padding-left:20px;font-size:13.5px}
+  li{margin:4px 0}
+  @media(max-width:640px){.apps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>D MONSTERS Q STUDIO</h1>
+  <div class="sub">Two browser-based studios that run 100% on-device — no upload, no account, no server.</div>
+
+  <div class="apps">
+    <a class="app" href="index.html">
+      <div class="ic">🎚️</div>
+      <div class="t">AUDIO STUDIO <span class="pill ok">31 tools</span></div>
+      <div class="d">Multitrack mixing &amp; editing. EQ, filters, drive, compressor, noise gate,
+        bitcrusher, tremolo, auto-pan, reverb, delay, pitch, reverse, normalize, split, metronome,
+        limiter, spectrum, undo/redo, project save/load, mic recording, WAV export.</div>
+    </a>
+    <a class="app" href="video/index.html">
+      <div class="ic">🎬</div>
+      <div class="t">VIDEO STUDIO <span class="pill warn">built</span></div>
+      <div class="d">Multi-clip video mixer. Trim, order, crossfade / dip / wipe transitions,
+        colour grades, title overlays, music track with fades, split &amp; delete, WebM export.</div>
+    </a>
+  </div>
+
+  <h2>How far it got</h2>
+  <table>
+    <tr><th>Part</th><th>State</th><th>Evidence</th></tr>
+    <tr>
+      <td><b>Audio studio</b><br><span class="muted">index.html</span></td>
+      <td><span class="pill ok">DONE + TESTED</span></td>
+      <td>Booted in a real browser, 31 tools present, no console errors. DSP measured numerically:
+          crusher 2199 → <b>7</b> distinct values at 3-bit; limiter capped 0.95 → <b>0.5012</b> at a −6 dB
+          ceiling; gate squashed 0.0008 → <b>0.00001</b> while passing a 0.7 tone. WAV export rendered.</td>
+    </tr>
+    <tr>
+      <td><b>AudioWorklet DSP</b><br><span class="muted">worklets.js</span></td>
+      <td><span class="pill ok">DONE + TESTED</span></td>
+      <td>3 processors confirmed live as <code>AudioWorkletNode</code>s on the audio thread, with
+          automatic fallbacks. Works in the offline export context too.</td>
+    </tr>
+    <tr>
+      <td><b>PWA / offline</b><br><span class="muted">manifest + sw.js</span></td>
+      <td><span class="pill ok">DONE + TESTED</span></td>
+      <td>Service worker reached <code>activated</code>; manifest parsed (3 icons, standalone).
+          Fixed a stale-cache bug that would have hidden every future update.</td>
+    </tr>
+    <tr>
+      <td><b>Video studio</b><br><span class="muted">video/index.html</span></td>
+      <td><span class="pill warn">BUILT — partly tested</span></td>
+      <td>Page boots, all controls present, canvas compositor wired. Browser confirmed
+          <code>MediaRecorder</code> + <code>captureStream</code> both work (recorded 2983 bytes of WebM).
+          <b>Full end-to-end video export was not run</b> — the headless test harness timed out.</td>
+    </tr>
+    <tr>
+      <td><b>Android app</b><br><span class="muted">android/</span></td>
+      <td><span class="pill warn">SOURCE COMPLETE — not compiled</span></td>
+      <td>Full Gradle project, WebView + <code>WebViewAssetLoader</code> (secure origin), no INTERNET
+          permission, mic handling, launcher icons. All XML valid, Java balanced, assets md5-matched.
+          <b>No APK exists yet</b> — this PC has no Java / Android SDK / Gradle.</td>
+    </tr>
+    <tr>
+      <td><b>F-Droid recipe</b><br><span class="muted">fdroid/metadata/</span></td>
+      <td><span class="pill ok">WRITTEN + VALIDATED</span></td>
+      <td>Parses as valid YAML, <code>subdir: android</code>, <code>gradle: yes</code>, no prebuild step.
+          Needs a tagged release + a merge request to <code>fdroiddata</code>.</td>
+    </tr>
+    <tr>
+      <td><b>Release signing</b></td>
+      <td><span class="pill ok">DONE</span></td>
+      <td>Gradle reads CI env vars or a git-ignored <code>keystore.properties</code>; falls back to
+          unsigned (what F-Droid wants). CI decodes the keystore from repo secrets.</td>
+    </tr>
+  </table>
+
+  <h2>Opening it on Android</h2>
+  <div class="note ok">
+    <b>Fastest — no APK needed.</b> Copy this folder to your phone, open a file manager, tap
+    <code>START-HERE.html</code> → choose Chrome. Both studios run. For the installable version
+    (home-screen icon, offline) host the folder on any HTTPS site — e.g. GitHub Pages — then
+    open it in Chrome and pick <b>Add to Home screen</b>.
+  </div>
+  <div class="note">
+    <b>About F-Droid:</b> you can't open a folder in F-Droid, and you can't upload an APK to it
+    either — F-Droid builds apps from source on its own servers. To get in the official F-Droid
+    app you publish the source and submit the recipe (already written in
+    <code>fdroid/metadata/</code>). To keep it personal, build the APK and either sideload it or
+    host your own F-Droid repo.
+  </div>
+  <div class="note bad">
+    <b>The one missing piece:</b> there is no <code>.apk</code> in this folder yet, because building
+    one needs Java + the Android SDK, which aren't installed here. Two ways to get it without
+    installing anything:
+    <ul>
+      <li>Push the folder to GitHub → <b>Actions → Build Android APK → Run workflow</b>
+          (the workflow is included) → download the APK artifact.</li>
+      <li>Or host the app, paste the URL into <b>pwabuilder.com</b> → Android → download a signed APK.</li>
+    </ul>
+  </div>
+
+  <h2>What's in the folder</h2>
+<pre>D-MONSTERS-Q-STUDIO/
+├── START-HERE.html          &lt;- you are here
+├── index.html               AUDIO studio (the whole app, 1 file)
+├── worklets.js              AudioWorklet DSP: gate / crusher / limiter
+├── video/index.html         VIDEO studio
+├── manifest.webmanifest     PWA manifest
+├── sw.js                    service worker
+├── icons/                   app icons
+├── android/                 real Gradle project -> builds the APK
+│   └── app/src/main/assets/www/   bundled web app (offline)
+├── fdroid/metadata/         F-Droid submission recipe
+├── .github/workflows/       cloud APK build (Gradle + TWA)
+├── README.md                full documentation
+├── serve.py                 run a local server to test on your phone
+├── make_icons.py            regenerate icons
+└── sync_android_assets.py   copy web app into the Android project</pre>
+
+  <h2>Run it on this PC</h2>
+<pre>cd D-MONSTERS-Q-STUDIO
+python serve.py</pre>
+  <div class="muted">It prints a <code>http://192.168.x.x:8000</code> URL — open that on your phone
+  over Wi-Fi and both studios work immediately. (Installing as an app needs HTTPS.)</div>
+
+  <p class="muted" style="margin-top:34px">MIT licensed · everything runs locally · no network code in the apps.</p>
+</div>
+</body>
+</html>

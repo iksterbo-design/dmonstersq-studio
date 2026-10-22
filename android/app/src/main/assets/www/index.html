@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<meta name="description" content="D MONSTERS Q STUDIO — a 30-tool multitrack audio mixing & editing studio that runs entirely in your browser.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>D MONSTERS Q STUDIO — Mix &amp; Edit</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --panel3:#111722; --line:#2a3140;
+    --txt:#e6edf3; --dim:#8b949e; --acc:#7c5cff; --acc2:#2dd4bf; --acc3:#ff7ac6;
+    --danger:#ff5c5c; --warn:#ffb454;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);
+    height:100dvh;display:flex;flex-direction:column;overflow:hidden;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .logo{font-weight:900;font-size:16px;letter-spacing:.6px;white-space:nowrap;
+    background:linear-gradient(90deg,var(--acc2),var(--acc),var(--acc3));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .badge{font-size:10px;background:var(--acc);color:#fff;border-radius:20px;padding:2px 8px;font-weight:700}
+  .spacer{flex:1}
+  .btn{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;
+    padding:6px 11px;cursor:pointer;font-size:12px;transition:.15s;white-space:nowrap}
+  .btn:hover{border-color:var(--acc);color:#fff}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.on{background:var(--acc2);border-color:var(--acc2);color:#04211d}
+  .btn.rec.on{background:var(--danger);border-color:var(--danger);color:#fff}
+  .transport{display:flex;gap:6px;align-items:center}
+  .tbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);
+    color:var(--txt);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+  .tbtn.play{background:var(--acc);border-color:var(--acc);color:#fff}
+  .time{font-family:Consolas,monospace;font-size:14px;color:var(--acc2);background:#0a0e14;
+    padding:6px 10px;border-radius:8px;border:1px solid var(--line);min-width:92px;text-align:center}
+  .meter{width:100px;height:10px;background:#0a0e14;border-radius:6px;border:1px solid var(--line);overflow:hidden;position:relative}
+  .meter>i{position:absolute;left:0;top:0;bottom:0;width:0%;
+    background:linear-gradient(90deg,var(--acc2),var(--warn),var(--danger))}
+  .grp{display:flex;align-items:center;gap:6px;background:var(--panel3);border:1px solid var(--line);
+    border-radius:9px;padding:4px 9px;font-size:11px;color:var(--dim)}
+  .grp input[type=range]{width:84px;accent-color:var(--acc)}
+  .grp input[type=number]{width:52px;background:#0a0e14;border:1px solid var(--line);color:var(--txt);
+    border-radius:5px;padding:3px 5px;font-size:11px}
+  #masterPanel{display:none;gap:10px;padding:8px 12px;background:var(--panel3);
+    border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+  #masterPanel.open{display:flex}
+  #trackArea{flex:1;overflow-y:auto;position:relative;padding:10px 12px 28px;-webkit-overflow-scrolling:touch}
+  #playhead{position:absolute;top:8px;bottom:20px;width:2px;background:var(--acc2);left:12px;
+    pointer-events:none;box-shadow:0 0 8px var(--acc2);z-index:5}
+  #loopShade{position:absolute;top:8px;bottom:20px;background:#2dd4bf18;border-left:1px solid var(--acc2);
+    border-right:1px solid var(--acc2);pointer-events:none;z-index:4;display:none}
+  .track{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--acc);
+    border-radius:12px;margin-bottom:12px;overflow:hidden}
+  .track-head{display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--panel2);
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .track-head input.name{background:transparent;border:none;color:var(--txt);font-weight:600;
+    font-size:13px;width:96px;outline:none}
+  .ctl{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
+  .ctl input[type=range]{width:62px;accent-color:var(--acc)}
+  .mini{background:#0a0e14;border:1px solid var(--line);color:var(--dim);border-radius:6px;
+    padding:3px 7px;cursor:pointer;font-size:11px}
+  .mini:hover{color:#fff;border-color:var(--acc)}
+  .mini.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .mini.solo.on{background:var(--acc2);border-color:var(--acc2);color:#04211d}
+  .tvmeter{width:56px;height:8px;background:#0a0e14;border:1px solid var(--line);border-radius:5px;overflow:hidden;position:relative}
+  .tvmeter>i{position:absolute;left:0;top:0;bottom:0;width:0%;background:linear-gradient(90deg,var(--acc2),var(--warn),var(--danger))}
+  input[type=color]{width:22px;height:22px;padding:0;border:1px solid var(--line);border-radius:5px;background:#0a0e14}
+  .wave{display:block;width:100%;height:84px;cursor:crosshair;
+    background:repeating-linear-gradient(90deg,transparent 0 99px,#ffffff08 99px 100px),#0a0e14}
+  .empty{color:var(--dim);font-size:12px;padding:6px 12px}
+  .fx{background:var(--panel3);border-top:1px solid var(--line);padding:8px 10px}
+  .fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 12px}
+  .fx-cell{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim);
+    background:#0a0e14;border:1px solid var(--line);border-radius:7px;padding:4px 7px}
+  .fx-cell label{min-width:50px;color:var(--acc2);font-weight:600}
+  .fx-cell input[type=range]{flex:1;width:100%;accent-color:var(--acc)}
+  .fx-cell .v{min-width:26px;text-align:right;font-family:Consolas,monospace;color:var(--txt)}
+  .fx-cell select{background:#0a0e14;border:1px solid var(--line);color:var(--txt);border-radius:5px;font-size:10px;padding:2px}
+  #specWrap{height:0;transition:height .2s;border-top:1px solid var(--line);background:#0a0e14;overflow:hidden}
+  #specWrap.open{height:88px}
+  #spec{display:block;width:100%;height:88px}
+  .hint{padding:7px 12px;font-size:11px;color:var(--dim);border-top:1px solid var(--line);background:var(--panel)}
+  kbd{background:#0a0e14;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10px}
+  #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--acc);
+    color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;
+    transition:opacity .25s;z-index:50;box-shadow:0 6px 24px #0008}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">D MONSTERS Q STUDIO</div>
+  <div class="badge">31 TOOLS</div>
+  <div class="transport">
+    <button class="tbtn play" id="btnPlay" title="Play">▶</button>
+    <button class="tbtn" id="btnPause" title="Pause">⏸</button>
+    <button class="tbtn" id="btnStop" title="Stop">⏹</button>
+  </div>
+  <div class="time" id="time">00:00.000</div>
+  <div class="meter"><i id="vu"></i></div>
+
+  <div class="grp">MASTER <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="1"></div>
+  <button class="btn" id="btnMasterFx">MASTER FX</button>
+
+  <div class="grp">🥁 <button class="mini" id="btnMetro">OFF</button>
+    <input type="number" id="bpm" value="120" min="40" max="300"> bpm
+    <button class="mini" id="btnTap" title="Tap tempo">TAP</button></div>
+
+  <div class="grp">🔁 <button class="mini" id="btnLoop">LOOP</button>
+    <input type="number" id="loopStart" value="0" step="0.1" min="0">
+    <input type="number" id="loopEnd" value="0" step="0.1" min="0"></div>
+
+  <div class="grp">LIM <button class="mini" id="btnLimiter">OFF</button>
+    <button class="mini" id="btnSpec">SPEC</button>
+    <button class="mini" id="btnBypass" title="Bypass all track FX">BYPASS</button></div>
+
+  <div class="spacer"></div>
+
+  <button class="btn" id="btnUndo" title="Undo">↶</button>
+  <button class="btn" id="btnRedo" title="Redo">↷</button>
+  <button class="btn rec" id="btnRecord">⏺ Rec</button>
+  <button class="btn" id="btnAutoLevel" title="Auto-level all tracks">AUTO LVL</button>
+  <button class="btn" id="btnSave">💾</button>
+  <button class="btn" id="btnLoad">📁</button>
+  <input type="file" id="projFile" accept="application/json" hidden>
+  <input type="file" id="multiFile" accept="audio/*" multiple hidden>
+  <button class="btn" id="btnAdd">＋ Track</button>
+  <button class="btn" id="btnImport">＋ Files</button>
+  <button class="btn primary" id="btnExport">⬇ WAV</button>
+  <button class="btn" id="btnInstall" style="display:none">📲 Install</button>
+</header>
+
+<div id="masterPanel">
+  <span style="font-size:11px;color:var(--acc2);font-weight:700">MASTER CHAIN</span>
+  <div class="fx-cell"><label>EQ LOW</label><input type="range" data-m="eqLow" min="-15" max="15" step="0.5" value="0"><span class="v">0</span></div>
+  <div class="fx-cell"><label>EQ MID</label><input type="range" data-m="eqMid" min="-15" max="15" step="0.5" value="0"><span class="v">0</span></div>
+  <div class="fx-cell"><label>EQ HIGH</label><input type="range" data-m="eqHigh" min="-15" max="15" step="0.5" value="0"><span class="v">0</span></div>
+  <div class="fx-cell"><label>HP FILTER</label><input type="range" data-m="hp" min="20" max="2000" step="5" value="20"><span class="v">20</span></div>
+</div>
+
+<div id="trackArea">
+  <div id="loopShade"></div>
+  <div id="playhead"></div>
+</div>
+
+<div id="specWrap"><canvas id="spec"></canvas></div>
+<div class="hint">
+  <b>31 tools.</b> Load audio → FX rack → edit → mix → Export WAV.
+  <kbd>Space</kbd> play · <kbd>Ctrl+Z</kbd> undo · tap a waveform to seek.
+</div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   D MONSTERS Q STUDIO — 30-tool multitrack mixing & editing studio
+   Runs 100% client-side (Web Audio API). PWA-installable, offline-ready.
+   ---------------------------------------------------------------------
+   MIX/EDIT : 1 EQ  2 Filter  3 Drive  4 Comp  5 Tremolo  6 Auto-pan
+              7 Reverb  8 Delay  9 Pitch  10 Reverse  11 Normalize
+              12 Duplicate  13 Split  14 Track meter
+   GLOBAL   : 15 Metronome  16 Loop  17 Limiter  18 Spectrum
+   WORKFLOW : 19 Undo/Redo  20 Save/Load + Mic record
+   EXTRA    : 21 Master EQ  22 Master HP  23 Noise gate  24 Input trim
+              25 Trim silence  26 Auto-level all  27 Quick fades
+              28 Track colors  29 Bypass FX  30 Tap tempo  31 Bitcrusher
+   DSP      : 23 / 31 / master limiter run as AudioWorklets on the audio
+              render thread (see worklets.js) with automatic fallbacks.
+   ===================================================================== */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const MAX_TRACKS = 8;
+
+/* ---------------- helpers ---------------- */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+function trimNum(n){ return (Math.round(n*100)/100).toString(); }
+function makeDistCurve(amount){
+  const n = 1024, curve = new Float32Array(n), k = Math.max(0, amount) * 100;
+  for(let i=0;i<n;i++){ const x = i*2/n - 1; curve[i] = (1+k)*x/(1+k*Math.abs(x)); }
+  return curve;
+}
+function makeImpulse(ctx, seconds=2.5, decay=2.5){
+  const rate = ctx.sampleRate, len = Math.max(1, Math.floor(rate*seconds));
+  const imp = ctx.createBuffer(2, len, rate);
+  for(let c=0;c<2;c++){ const d = imp.getChannelData(c);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, decay); }
+  return imp;
+}
+function download(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+let toastTimer;
+function toast(msg){
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('show'), 1600);
+}
+
+/* ---------------- master FX state (tools 21,22) ---------------- */
+const masterFx = { eqLow:0, eqMid:0, eqHigh:0, hp:20 };
+
+/* ---------------- per-track default params ---------------- */
+function defaultParams(){
+  return {
+    volume:0.8, pan:0, color:'#7c5cff',
+    eqLow:0, eqMid:0, eqHigh:0,
+    filterType:'off', filterFreq:18000,
+    drive:0,
+    compOn:false, compThreshold:-24, compRatio:4,
+    gateOn:false, gateThreshold:-45, gateHold:0.05, gateAttack:0.002, gateRelease:0.12,  // tool 23
+    crushOn:false, crushBits:8, crushReduction:1, crushMix:1,                              // tool 31
+    inputGain:1,                               // tool 24
+    tremRate:5, tremDepth:0,
+    autopanRate:0.5, autopanDepth:0,
+    reverbSend:0, delaySend:0,
+    trimStart:0, trimEnd:0, fadeIn:0, fadeOut:0,
+    mute:false, solo:false
+  };
+}
+
+/* ---------------- graph factories ---------------- */
+async function loadWorklets(ctx){
+  if(!ctx.audioWorklet) return false;
+  try{ await ctx.audioWorklet.addModule('worklets.js'); return true; }
+  catch(e){ console.warn('[DMQ] AudioWorklet unavailable, using fallbacks:', e.message); return false; }
+}
+function makeReverbBus(ctx){
+  const conv = ctx.createConvolver(); conv.buffer = makeImpulse(ctx, 2.5, 2.5);
+  const wet = ctx.createGain(); wet.gain.value = 1.0;
+  conv.connect(wet);
+  return { input: conv, wet };
+}
+function makeDelayBus(ctx){
+  const delay = ctx.createDelay(2.0); delay.delayTime.value = 0.3;
+  const fb = ctx.createGain(); fb.gain.value = 0.35;
+  const wet = ctx.createGain(); wet.gain.value = 0.9;
+  delay.connect(fb); fb.connect(delay); delay.connect(wet);
+  return { input: delay, wet, delay, fb };
+}
+function buildBuses(ctx){
+  const masterIn  = ctx.createGain();
+  const masterHP  = ctx.createBiquadFilter(); masterHP.type='highpass'; masterHP.frequency.value=20;
+  const mEqLow    = ctx.createBiquadFilter(); mEqLow.type='lowshelf';  mEqLow.frequency.value=200;
+  const mEqMid    = ctx.createBiquadFilter(); mEqMid.type='peaking';   mEqMid.frequency.value=1000; mEqMid.Q.value=0.9;
+  const mEqHigh   = ctx.createBiquadFilter(); mEqHigh.type='highshelf';mEqHigh.frequency.value=4000;
+  const master    = ctx.createGain();
+  let limiter, limiterWorklet = false;
+  if(workletReady){
+    limiter = new AudioWorkletNode(ctx, 'dmq-limiter', {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2]
+    });
+    limiter.parameters.get('bypass').value = 1;
+    limiterWorklet = true;
+  } else {
+    limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = 0; limiter.ratio.value = 1;
+    limiter.attack.value = 0.003; limiter.release.value = 0.25;
+  }
+  const analyser  = ctx.createAnalyser(); analyser.fftSize = 2048;
+
+  masterIn.connect(masterHP); masterHP.connect(mEqLow); mEqLow.connect(mEqMid);
+  mEqMid.connect(mEqHigh); mEqHigh.connect(master);
+  master.connect(limiter); limiter.connect(analyser); analyser.connect(ctx.destination);
+
+  const reverb = makeReverbBus(ctx); reverb.wet.connect(masterIn);
+  const delay  = makeDelayBus(ctx);  delay.wet.connect(masterIn);
+  return { masterIn, masterHP, mEqLow, mEqMid, mEqHigh, master, limiter, limiterWorklet, analyser, reverb, delay };
+}
+function makeChain(ctx, dest, reverbIn, delayIn){
+  const input  = ctx.createGain();                       // tool 24 input trim
+  const eqLow  = ctx.createBiquadFilter(); eqLow.type='lowshelf';  eqLow.frequency.value=200;
+  const eqMid  = ctx.createBiquadFilter(); eqMid.type='peaking';   eqMid.frequency.value=1000; eqMid.Q.value=0.9;
+  const eqHigh = ctx.createBiquadFilter(); eqHigh.type='highshelf';eqHigh.frequency.value=4000;
+  const filter = ctx.createBiquadFilter(); filter.type='allpass'; filter.frequency.value=1000;
+  const shaper = ctx.createWaveShaper(); shaper.oversample='2x'; shaper.curve = makeDistCurve(0);
+  const comp   = ctx.createDynamicsCompressor(); comp.threshold.value=0; comp.ratio.value=1;
+
+  // tool 23: noise gate — AudioWorklet DSP, else analyser-driven GainNode fallback
+  let gate, gateWorklet = false, gateTap = null;
+  if(workletReady){
+    gate = new AudioWorkletNode(ctx, 'dmq-gate', {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2]
+    });
+    gate.parameters.get('bypass').value = 1;
+    gateWorklet = true;
+  } else {
+    gate = ctx.createGain(); gate.gain.value = 1;
+    gateTap = ctx.createAnalyser(); gateTap.fftSize = 1024;
+  }
+
+  // tool 31: bitcrusher — AudioWorklet DSP, else passthrough
+  let crusher, crusherWorklet = false;
+  if(workletReady){
+    crusher = new AudioWorkletNode(ctx, 'dmq-crusher', {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2]
+    });
+    crusher.parameters.get('bypass').value = 1;
+    crusherWorklet = true;
+  } else {
+    crusher = ctx.createGain(); crusher.gain.value = 1;
+  }
+
+  const tremGain = ctx.createGain(); tremGain.gain.value = 1;
+  const pan      = ctx.createStereoPanner();
+  const fader    = ctx.createGain();
+  const meterTap = ctx.createAnalyser(); meterTap.fftSize = 1024;    // tool 14 post-fader meter
+  const reverbSend = ctx.createGain();
+  const delaySend  = ctx.createGain();
+
+  input.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(filter);
+  filter.connect(shaper); shaper.connect(comp); comp.connect(gate);
+  if(gateTap) comp.connect(gateTap);      // pre-gate level tap (fallback gate only)
+  gate.connect(crusher); crusher.connect(tremGain); tremGain.connect(pan);
+  pan.connect(fader); fader.connect(dest);
+  fader.connect(meterTap);               // post-fader meter tap
+  fader.connect(reverbSend); reverbSend.connect(reverbIn);
+  fader.connect(delaySend);  delaySend.connect(delayIn);
+
+  const tremLfo = ctx.createOscillator(); tremLfo.frequency.value = 5;
+  const tremDepth = ctx.createGain(); tremDepth.gain.value = 0;
+  tremLfo.connect(tremDepth); tremDepth.connect(tremGain.gain);
+  const autopanLfo = ctx.createOscillator(); autopanLfo.frequency.value = 0.5;
+  const autopanDepth = ctx.createGain(); autopanDepth.gain.value = 0;
+  autopanLfo.connect(autopanDepth); autopanDepth.connect(pan.pan);
+  try{ tremLfo.start(0); autopanLfo.start(0); }catch(e){}
+
+  return { input, eqLow, eqMid, eqHigh, filter, shaper, comp, gate, gateWorklet, gateTap,
+           crusher, crusherWorklet, tremGain, tremLfo, tremDepth, pan, autopanLfo, autopanDepth,
+           fader, meterTap, reverbSend, delaySend };
+}
+let fxBypass = false;                                    // tool 29
+function applyChainParams(fx, p, audible){
+  const b = fxBypass;
+  fx.input.gain.value  = b ? 1 : p.inputGain;
+  fx.eqLow.gain.value  = b ? 0 : p.eqLow;
+  fx.eqMid.gain.value  = b ? 0 : p.eqMid;
+  fx.eqHigh.gain.value = b ? 0 : p.eqHigh;
+  fx.filter.type = (b || p.filterType === 'off') ? 'allpass' : p.filterType;
+  fx.filter.frequency.value = p.filterFreq;
+  fx.shaper.curve = makeDistCurve(b ? 0 : p.drive);
+  if(!b && p.compOn){ fx.comp.threshold.value = p.compThreshold; fx.comp.ratio.value = p.compRatio; }
+  else { fx.comp.threshold.value = 0; fx.comp.ratio.value = 1; }
+  if(fx.gateWorklet){
+    fx.gate.parameters.get('bypass').value    = (b || !p.gateOn) ? 1 : 0;
+    fx.gate.parameters.get('threshold').value = p.gateThreshold;
+    fx.gate.parameters.get('hold').value      = p.gateHold;
+    fx.gate.parameters.get('attack').value    = p.gateAttack;
+    fx.gate.parameters.get('release').value   = p.gateRelease;
+  } else if(b || !p.gateOn) fx.gate.gain.value = 1;
+  if(fx.crusherWorklet){
+    fx.crusher.parameters.get('bypass').value    = (b || !p.crushOn) ? 1 : 0;
+    fx.crusher.parameters.get('bits').value      = p.crushBits;
+    fx.crusher.parameters.get('reduction').value = p.crushReduction;
+    fx.crusher.parameters.get('mix').value       = p.crushMix;
+  }
+  fx.tremLfo.frequency.value    = p.tremRate;
+  fx.tremDepth.gain.value       = b ? 0 : p.tremDepth;
+  fx.autopanLfo.frequency.value = p.autopanRate;
+  fx.autopanDepth.gain.value    = b ? 0 : p.autopanDepth;
+  fx.reverbSend.gain.value = b ? 0 : p.reverbSend;
+  fx.delaySend.gain.value  = b ? 0 : p.delaySend;
+  fx.pan.pan.value = p.pan;
+  fx.fader.gain.value = p.volume * (audible ? 1 : 0);
+}
+function applyMasterFx(buses, bypass){
+  const m = masterFx;
+  buses.masterHP.frequency.value = m.hp;
+  buses.mEqLow.gain.value  = bypass ? 0 : m.eqLow;
+  buses.mEqMid.gain.value  = bypass ? 0 : m.eqMid;
+  buses.mEqHigh.gain.value = bypass ? 0 : m.eqHigh;
+}
+function setLimiter(buses, on){
+  if(buses.limiterWorklet){
+    buses.limiter.parameters.get('bypass').value  = on ? 0 : 1;
+    buses.limiter.parameters.get('ceiling').value = -1;
+  } else {
+    if(on){ buses.limiter.threshold.value = -3; buses.limiter.ratio.value = 20; }
+    else { buses.limiter.threshold.value = 0; buses.limiter.ratio.value = 1; }
+  }
+}
+function disconnectChain(fx){
+  try{ fx.tremLfo.stop(); }catch(e){}
+  try{ fx.autopanLfo.stop(); }catch(e){}
+  Object.values(fx).forEach(n => { if(n && n.disconnect){ try{ n.disconnect(); }catch(e){} } });
+}
+
+/* ---------------- live buses & state ---------------- */
+let LIVE = null;            // built in boot() once worklets have loaded
+let workletReady = false;   // AudioWorklet DSP available?
+const tracks = [];
+let nextId = 1;
+let playing = false, playPos = 0, playStartCtx = 0;
+let metroOn = false, loopOn = false, limiterOn = false, spectrumOn = false, recording = false;
+let metroNodes = [], tapTimes = [];
+let undoStack = [], redoStack = [];
+let recorder = null;
+let vuData = null;          // sized in boot()
+
+/* ---------------- Track ---------------- */
+class Track {
+  constructor(){
+    this.id = nextId++;
+    this.name = 'Track ' + this.id;
+    this.buffer = null; this.rate = 1.0; this.sources = [];
+    this.p = defaultParams();
+    this.fx = makeChain(audioCtx, LIVE.masterIn, LIVE.reverb.input, LIVE.delay.input);
+    this.el = null; this.canvas = null; this.tvm = null;
+    this.gateBuf = this.fx.gateTap ? new Uint8Array(this.fx.gateTap.fftSize) : null;
+    this.meterBuf = new Uint8Array(this.fx.meterTap.fftSize);
+  }
+  get duration(){ return this.buffer ? this.buffer.duration : 0; }
+  get end(){ return this.p.trimEnd > 0 ? Math.min(this.p.trimEnd, this.duration) : this.duration; }
+  get trimLen(){ return Math.max(0, this.end - this.p.trimStart); }
+  get audible(){ const anySolo = tracks.some(t => t.p.solo); return anySolo ? this.p.solo : !this.p.mute; }
+  startSource(offset){
+    if(!this.buffer) return;
+    const remaining = this.trimLen - offset;
+    if(remaining <= 0.001) return;
+    const src = audioCtx.createBufferSource();
+    src.buffer = this.buffer; src.playbackRate.value = this.rate;
+    src.connect(this.fx.input);
+    src.start(0, this.p.trimStart + offset, remaining);
+    this.sources.push(src);
+  }
+  stopSources(){
+    this.sources.forEach(s => { try{s.stop();}catch(e){} try{s.disconnect();}catch(e){} });
+    this.sources = [];
+  }
+}
+
+/* ---------------- build track UI ---------------- */
+const trackArea = $('trackArea');
+function buildTrackEl(t){
+  const el = document.createElement('div');
+  el.className = 'track';
+  el.innerHTML = `
+    <div class="track-head">
+      <input type="color" class="color" title="Track color (tool 28)">
+      <input class="name" value="${t.name}">
+      <button class="mini load" title="Load audio file">📂</button>
+      <input type="file" accept="audio/*" hidden>
+      <div class="ctl">VOL <input type="range" class="vol" min="0" max="1.5" step="0.01" value="0.8"></div>
+      <div class="ctl">PAN <input type="range" class="pan" min="-1" max="1" step="0.01" value="0"></div>
+      <button class="mini mute" title="Mute">M</button>
+      <button class="mini solo" title="Solo">S</button>
+      <div class="tvmeter" title="Track meter (tool 14)"><i></i></div>
+      <button class="mini fdin"  title="Quick fade-in (tool 27)">↗</button>
+      <button class="mini fdout" title="Quick fade-out (tool 27)">↘</button>
+      <button class="mini silence" title="Trim silence (tool 25)">⇥⇤</button>
+      <button class="mini dup"  title="Duplicate (tool 12)">⧉</button>
+      <button class="mini rev"  title="Reverse (tool 10)">⇄</button>
+      <button class="mini norm" title="Normalize (tool 11)">⤒</button>
+      <button class="mini split"title="Split at playhead (tool 13)">✂</button>
+      <button class="mini fx-toggle" title="FX rack (tools 1-9, 23, 24)">FX ▾</button>
+      <button class="mini rm" style="color:var(--danger)" title="Remove">✕</button>
+    </div>
+    <canvas class="wave"></canvas>
+    <div class="empty">No audio — tap 📂 or drag a file here.</div>
+    <div class="fx" hidden>
+      <div class="fx-grid">
+        <div class="fx-cell"><label>IN GAIN</label><input type="range" data-p="inputGain" min="0" max="4" step="0.01" value="1"><span class="v">1</span></div>
+        <div class="fx-cell"><label>EQ LOW</label><input type="range" data-p="eqLow" min="-15" max="15" step="0.5" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>EQ MID</label><input type="range" data-p="eqMid" min="-15" max="15" step="0.5" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>EQ HIGH</label><input type="range" data-p="eqHigh" min="-15" max="15" step="0.5" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>FILTER</label>
+          <select data-p="filterType"><option value="off">off</option><option value="lowpass">low-pass</option><option value="highpass">high-pass</option></select>
+          <input type="range" data-p="filterFreq" min="40" max="18000" step="10" value="18000"></div>
+        <div class="fx-cell"><label>DRIVE</label><input type="range" data-p="drive" min="0" max="1" step="0.01" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>COMP</label><input type="checkbox" data-p="compOn">
+          <input type="range" data-p="compThreshold" min="-60" max="0" step="1" value="-24">
+          <input type="range" data-p="compRatio" min="1" max="20" step="0.5" value="4"></div>
+        <div class="fx-cell"><label>GATE</label><input type="checkbox" data-p="gateOn">
+          <input type="range" data-p="gateThreshold" min="-80" max="0" step="1" value="-45"><span class="v">-45</span></div>
+        <div class="fx-cell"><label>CRUSH</label><input type="checkbox" data-p="crushOn">
+          <input type="range" data-p="crushBits" min="1" max="16" step="1" value="8" title="bit depth">
+          <input type="range" data-p="crushReduction" min="1" max="50" step="1" value="1" title="rate reduction">
+          <span class="v">8</span></div>
+        <div class="fx-cell"><label>TREM</label><input type="range" data-p="tremRate" min="0.1" max="20" step="0.1" value="5">
+          <input type="range" data-p="tremDepth" min="0" max="0.9" step="0.01" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>A-PAN</label><input type="range" data-p="autopanRate" min="0.05" max="8" step="0.05" value="0.5">
+          <input type="range" data-p="autopanDepth" min="0" max="1" step="0.01" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>REVERB</label><input type="range" data-p="reverbSend" min="0" max="1" step="0.01" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>DELAY</label><input type="range" data-p="delaySend" min="0" max="1" step="0.01" value="0"><span class="v">0</span></div>
+        <div class="fx-cell"><label>PITCH×</label><input type="range" class="rate" min="0.25" max="2" step="0.01" value="1"><span class="v">1</span></div>
+        <div class="fx-cell"><label>TRIM ✂</label><input type="range" class="ts" min="0" max="0" step="0.01" value="0">
+          <input type="range" class="te" min="0" max="0" step="0.01" value="0"></div>
+        <div class="fx-cell"><label>FADE</label><input type="range" class="fi" min="0" max="5" step="0.05" value="0">
+          <input type="range" class="fo" min="0" max="5" step="0.05" value="0"></div>
+      </div>
+    </div>`;
+  trackArea.appendChild(el);
+  t.el = el;
+  t.canvas = el.querySelector('.wave');
+  t.tvm = el.querySelector('.tvmeter > i');
+  const q = s => el.querySelector(s);
+
+  q('.name').addEventListener('input', e => t.name = e.target.value);
+  q('.color').addEventListener('input', e => { t.p.color = e.target.value; applyColor(t); });
+  const fileInput = q('input[type=file]');
+  q('.load').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(t, e.target.files[0]); });
+
+  q('.vol').addEventListener('input', e => { t.p.volume = +e.target.value; syncChain(t); });
+  q('.pan').addEventListener('input', e => { t.p.pan = +e.target.value; syncChain(t); });
+  q('.mute').addEventListener('click', e => { t.p.mute = !t.p.mute; e.target.classList.toggle('on', t.p.mute); refreshGains(); });
+  q('.solo').addEventListener('click', e => { t.p.solo = !t.p.solo; e.target.classList.toggle('on', t.p.solo); refreshGains(); });
+
+  q('.dup').addEventListener('click', () => duplicateTrack(t));
+  q('.rev').addEventListener('click', () => reverseTrack(t));
+  q('.norm').addEventListener('click', () => normalizeTrack(t));
+  q('.split').addEventListener('click', () => splitTrack(t, currentPos()));
+  q('.silence').addEventListener('click', () => trimSilence(t));
+  q('.fdin').addEventListener('click', () => { pushUndo(); t.p.fadeIn = 0.5; refreshTrackUI(t); toast('Fade-in 0.5s'); });
+  q('.fdout').addEventListener('click', () => { pushUndo(); t.p.fadeOut = 0.5; refreshTrackUI(t); toast('Fade-out 0.5s'); });
+  q('.fx-toggle').addEventListener('click', e => {
+    const fx = q('.fx'); fx.hidden = !fx.hidden;
+    e.target.textContent = fx.hidden ? 'FX ▾' : 'FX ▴';
+  });
+  q('.rm').addEventListener('click', () => { pushUndo(); removeTrack(t); });
+
+  el.querySelectorAll('[data-p]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const key = inp.dataset.p;
+      const val = inp.type === 'checkbox' ? inp.checked
+                : (inp.type === 'range' || inp.type === 'number') ? +inp.value : inp.value;
+      t.p[key] = val;
+      const span = inp.parentElement.querySelector('.v');
+      if(span) span.textContent = (typeof val === 'number') ? trimNum(val) : val;
+      syncChain(t);
+    });
+  });
+  q('.rate').addEventListener('input', e => { t.rate = +e.target.value; e.target.parentElement.querySelector('.v').textContent = trimNum(t.rate); updatePlayhead(); });
+  q('.ts').addEventListener('input', e => { t.p.trimStart = +e.target.value; clampTrim(t); drawWave(t); updatePlayhead(); });
+  q('.te').addEventListener('input', e => { t.p.trimEnd = +e.target.value; clampTrim(t); drawWave(t); updatePlayhead(); });
+  q('.fi').addEventListener('input', e => t.p.fadeIn = +e.target.value);
+  q('.fo').addEventListener('input', e => t.p.fadeOut = +e.target.value);
+
+  el.addEventListener('dragover', e => { e.preventDefault(); el.style.borderColor = 'var(--acc)'; });
+  el.addEventListener('dragleave', () => el.style.borderColor = '');
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.style.borderColor = '';
+    const f = e.dataTransfer.files[0]; if(f) loadFile(t, f);
+  });
+  t.canvas.addEventListener('click', e => {
+    if(!t.buffer) return;
+    const r = t.canvas.getBoundingClientRect();
+    seek(((e.clientX - r.left) / r.width) * Math.max(1e-6, maxLen()));
+  });
+  applyColor(t);
+}
+function applyColor(t){ t.el.style.borderLeftColor = t.p.color; }
+function refreshTrackUI(t){
+  const q = s => t.el.querySelector(s);
+  q('.name').value = t.name;
+  q('.color').value = t.p.color; applyColor(t);
+  q('.vol').value = t.p.volume; q('.pan').value = t.p.pan;
+  q('.mute').classList.toggle('on', t.p.mute);
+  q('.solo').classList.toggle('on', t.p.solo);
+  q('.rate').value = t.rate;
+  q('.rate').parentElement.querySelector('.v').textContent = trimNum(t.rate);
+  const d = t.duration;
+  q('.ts').max = d.toFixed(2); q('.te').max = d.toFixed(2);
+  q('.ts').value = t.p.trimStart; q('.te').value = t.p.trimEnd;
+  q('.fi').value = t.p.fadeIn; q('.fo').value = t.p.fadeOut;
+  t.el.querySelectorAll('[data-p]').forEach(inp => {
+    const key = inp.dataset.p, val = t.p[key];
+    if(inp.type === 'checkbox') inp.checked = !!val; else inp.value = val;
+    const span = inp.parentElement.querySelector('.v');
+    if(span) span.textContent = (typeof val === 'number') ? trimNum(val) : val;
+  });
+  t.el.querySelector('.empty').style.display = t.buffer ? 'none' : 'block';
+}
+
+/* ---------------- add / remove ---------------- */
+function addTrack(){
+  if(tracks.length >= MAX_TRACKS){ toast('Max ' + MAX_TRACKS + ' tracks'); return null; }
+  const t = new Track();
+  const palette = ['#7c5cff','#2dd4bf','#ff7ac6','#ffb454','#ff5c5c','#5cff9d','#5cb8ff','#c85cff'];
+  t.p.color = palette[tracks.length % palette.length];
+  tracks.push(t);
+  buildTrackEl(t); refreshTrackUI(t); syncChain(t); drawWave(t); updatePlayhead();
+  return t;
+}
+function removeTrack(t){
+  t.stopSources(); disconnectChain(t.fx);
+  tracks.splice(tracks.indexOf(t), 1);
+  t.el.remove(); updatePlayhead();
+}
+function refreshGains(){ tracks.forEach(syncChain); }
+function syncChain(t){ applyChainParams(t.fx, t.p, t.audible); }
+function clampTrim(t){
+  const d = t.duration;
+  t.p.trimStart = clamp(t.p.trimStart, 0, d);
+  t.p.trimEnd   = clamp(t.p.trimEnd, 0, d);
+  if(t.p.trimEnd > 0 && t.p.trimEnd < t.p.trimStart) t.p.trimEnd = t.p.trimStart;
+}
+
+/* ---------------- load files ---------------- */
+async function loadFile(t, file){
+  try{
+    const buf = await audioCtx.decodeAudioData(await file.arrayBuffer());
+    t.buffer = buf; t.p.trimStart = 0; t.p.trimEnd = 0;
+    t.name = file.name.replace(/\.[^.]+$/, '');
+    refreshTrackUI(t); syncChain(t); drawWave(t); updatePlayhead();
+    toast('Loaded: ' + t.name);
+  }catch(err){ alert('Could not decode audio: ' + err.message); }
+}
+async function importFiles(files){                      // tool: multi-import
+  const list = [...files];
+  for(const f of list){
+    let t = tracks.find(x => !x.buffer);
+    if(!t){ t = addTrack(); }
+    if(!t){ toast('Max tracks reached'); break; }
+    await loadFile(t, f);
+  }
+  toast('Imported ' + list.length + ' file(s)');
+}
+
+/* ---------------- waveform ---------------- */
+function drawWave(t){
+  const c = t.canvas, dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth || 600, h = c.clientHeight || 84;
+  c.width = w*dpr; c.height = h*dpr;
+  const ctx = c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  if(!t.buffer){
+    ctx.fillStyle = '#8b949e'; ctx.font = '12px sans-serif';
+    ctx.fillText('empty track', 12, h/2); return;
+  }
+  const data = t.buffer.getChannelData(0), sr = t.buffer.sampleRate, dur = t.buffer.duration;
+  const start = Math.floor(t.p.trimStart*sr), end = Math.floor(t.end*sr);
+  const len = Math.max(1, end-start), step = Math.max(1, Math.floor(len/w));
+  const sx = (start/sr)/dur*w, ex = (t.end/dur)*w;
+  ctx.fillStyle = '#0a0e14';
+  ctx.fillRect(0,0,Math.max(0,sx),h); ctx.fillRect(Math.min(w,ex),0,w,h);
+  ctx.fillStyle = t.p.color || '#7c5cff';
+  for(let x=0;x<w;x++){
+    const i0 = start + x*step; let mn=1,mx=-1;
+    for(let j=0;j<step && i0+j<end;j++){ const v=data[i0+j]; if(v<mn)mn=v; if(v>mx)mx=v; }
+    ctx.fillRect(x,(1-(mx*0.5+0.5))*h,1,Math.max(1,((1-(mn*0.5+0.5))*h)-((1-(mx*0.5+0.5))*h)));
+  }
+  ctx.fillStyle = '#2dd4bf';
+  ctx.fillRect(Math.max(0,sx)-1,0,2,h); ctx.fillRect(Math.min(w,ex)-1,0,2,h);
+}
+
+/* ---------------- transport ---------------- */
+function maxLen(){ return Math.max(0, ...tracks.map(t => t.trimLen / t.rate)); }
+function currentPos(){ return playing ? playPos + (audioCtx.currentTime - playStartCtx) : playPos; }
+function play(){
+  if(playing || maxLen() <= 0) return;
+  audioCtx.resume();
+  playing = true; playStartCtx = audioCtx.currentTime;
+  tracks.forEach(t => { if(t.audible) t.startSource(playPos); });
+  scheduleMetronome(playPos);
+}
+function pause(){
+  if(!playing) return;
+  playPos += audioCtx.currentTime - playStartCtx;
+  tracks.forEach(t => t.stopSources()); stopMetronome();
+  playing = false; updatePlayhead();
+}
+function stop(){
+  tracks.forEach(t => t.stopSources()); stopMetronome();
+  playing = false; playPos = 0; updatePlayhead(0);
+}
+function seek(pos){
+  const wp = playing;
+  if(wp){ tracks.forEach(t => t.stopSources()); stopMetronome(); playing = false; }
+  playPos = clamp(pos, 0, maxLen());
+  if(wp){
+    playStartCtx = audioCtx.currentTime;
+    tracks.forEach(t => { if(t.audible) t.startSource(playPos); });
+    scheduleMetronome(playPos); playing = true;
+  }
+  updatePlayhead(playPos);
+}
+function updatePlayhead(pos){
+  if(pos === undefined) pos = currentPos();
+  const ml = maxLen() || 1, pct = clamp(pos/ml, 0, 1)*100;
+  $('playhead').style.left = `calc(${pct}% + 12px)`;
+  $('time').textContent = fmt(pos);
+  const ls = +$('loopStart').value, le = +$('loopEnd').value, shade = $('loopShade');
+  if(loopOn && le > ls){
+    shade.style.display = 'block';
+    shade.style.left = `calc(${(ls/ml)*100}% + 12px)`;
+    shade.style.width = `${((le-ls)/ml)*100}%`;
+  } else shade.style.display = 'none';
+}
+function fmt(s){
+  s = Math.max(0, s||0);
+  const m = Math.floor(s/60), sec = Math.floor(s%60), ms = Math.floor((s*1000)%1000);
+  return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'.'+String(ms).padStart(3,'0');
+}
+
+/* ---------------- tool 15: metronome + 30: tap tempo ---------------- */
+const metroGain = audioCtx.createGain(); metroGain.gain.value = 0.6; metroGain.connect(audioCtx.destination);
+function scheduleMetronome(fromPos){
+  if(!metroOn) return;
+  const bpm = clamp(+$('bpm').value || 120, 40, 300);
+  const beat = 60/bpm, end = maxLen(), startBeat = Math.ceil(fromPos/beat);
+  for(let i=0, b=startBeat*beat; b<end; b+=beat, i++){
+    const when = audioCtx.currentTime + (b - fromPos);
+    const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+    osc.frequency.value = (i%4===0) ? 1500 : 1000;
+    osc.connect(g); g.connect(metroGain);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.5, when+0.001);
+    g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
+    osc.start(when); osc.stop(when+0.06); metroNodes.push(osc);
+  }
+}
+function stopMetronome(){ metroNodes.forEach(o => { try{o.stop();}catch(e){} }); metroNodes = []; }
+function tapTempo(){
+  const now = performance.now();
+  const last = tapTimes[tapTimes.length - 1];
+  if(last !== undefined && now - last > 2500) tapTimes = [];   // long gap -> restart
+  if(last !== undefined && now - last < 120) return;           // debounce accidental double-tap
+  tapTimes.push(now);
+  if(tapTimes.length > 8) tapTimes.shift();
+  if(tapTimes.length >= 2){
+    const iv = [];
+    for(let i=1;i<tapTimes.length;i++) iv.push(tapTimes[i]-tapTimes[i-1]);
+    iv.sort((a,b) => a-b);
+    const med = iv[Math.floor(iv.length/2)];                   // median = robust to outliers
+    const bpm = Math.round(60000/med);
+    $('bpm').value = clamp(bpm, 40, 300);
+    toast('Tempo: ' + $('bpm').value + ' BPM');
+  }
+}
+
+/* ---------------- animation loop ---------------- */
+let rafId = null;
+function loop(){
+  if(playing){
+    const pos = currentPos(), ls = +$('loopStart').value, le = +$('loopEnd').value;
+    if(loopOn && le > ls && pos >= le) seek(ls);
+    else if(pos >= maxLen()) stop();
+    else updatePlayhead(pos);
+  }
+  LIVE.analyser.getByteTimeDomainData(vuData);
+  let sum = 0;
+  for(let i=0;i<vuData.length;i++){ const v = (vuData[i]-128)/128; sum += v*v; }
+  $('vu').style.width = Math.min(100, Math.sqrt(sum/vuData.length)*220) + '%';
+
+  tracks.forEach(t => {
+    // tool 23: noise gate (analyser-driven, pre-gate tap)
+    if(!t.fx.gateWorklet && !fxBypass && t.p.gateOn && t.buffer && t.gateBuf){
+      t.fx.gateTap.getByteTimeDomainData(t.gateBuf);
+      let s = 0;
+      for(let i=0;i<t.gateBuf.length;i++){ const v=(t.gateBuf[i]-128)/128; s += v*v; }
+      const rms = Math.sqrt(s/t.gateBuf.length);
+      const db = 20*Math.log10(rms + 1e-7);
+      const open = db > t.p.gateThreshold;
+      const cur = t.fx.gate.gain.value;
+      t.fx.gate.gain.value = cur + ((open?1:0) - cur) * (open ? 0.55 : 0.12);
+    }
+    // tool 14: real post-fader meter
+    if(t.tvm){
+      if(playing && t.buffer){
+        t.fx.meterTap.getByteTimeDomainData(t.meterBuf);
+        let s2 = 0;
+        for(let i=0;i<t.meterBuf.length;i++){ const v=(t.meterBuf[i]-128)/128; s2 += v*v; }
+        t.tvm.style.width = Math.min(100, Math.sqrt(s2/t.meterBuf.length)*260) + '%';
+      } else t.tvm.style.width = '0%';
+    }
+  });
+  if(spectrumOn) drawSpectrum();
+  rafId = requestAnimationFrame(loop);
+}
+function drawSpectrum(){
+  const canvas = $('spec'), w = canvas.clientWidth || 800, h = canvas.clientHeight || 88;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  const bins = new Uint8Array(LIVE.analyser.frequencyBinCount);
+  LIVE.analyser.getByteFrequencyData(bins);
+  const bars = 72, step = Math.max(1, Math.floor(bins.length/bars)), bw = w/bars;
+  for(let i=0;i<bars;i++){
+    let v = 0; for(let j=0;j<step;j++) v = Math.max(v, bins[i*step+j]||0);
+    ctx.fillStyle = `hsl(${265 - i*2.2},85%,62%)`;
+    ctx.fillRect(i*bw, h-(v/255)*h, Math.max(1,bw-2), (v/255)*h);
+  }
+}
+
+/* ---------------- edits ---------------- */
+function reverseTrack(t){
+  if(!t.buffer){ toast('Load audio first'); return; }
+  pushUndo();
+  const b = t.buffer, ch = b.numberOfChannels, len = b.length, sr = b.sampleRate;
+  const rev = audioCtx.createBuffer(ch, len, sr);
+  for(let c=0;c<ch;c++){ const s=b.getChannelData(c), d=rev.getChannelData(c);
+    for(let i=0;i<len;i++) d[i]=s[len-1-i]; }
+  const dur = b.duration, a = t.p.trimStart, e = t.p.trimEnd>0 ? t.p.trimEnd : dur;
+  t.buffer = rev; t.p.trimStart = Math.max(0, dur-e); t.p.trimEnd = dur-a;
+  refreshTrackUI(t); syncChain(t); drawWave(t); updatePlayhead();
+  toast('Reversed “'+t.name+'”');
+}
+function normalizeTrack(t){
+  if(!t.buffer){ toast('Load audio first'); return; }
+  pushUndo();
+  let peak = 0;
+  for(let c=0;c<t.buffer.numberOfChannels;c++){
+    const d = t.buffer.getChannelData(c);
+    for(let i=0;i<d.length;i++){ const a=Math.abs(d[i]); if(a>peak)peak=a; }
+  }
+  if(peak>0){ t.p.volume = Math.min(1.5, 0.99/peak); refreshTrackUI(t); syncChain(t); toast('Normalized → '+trimNum(t.p.volume)); }
+  else toast('Silent track');
+}
+function duplicateTrack(t){
+  if(tracks.length >= MAX_TRACKS){ toast('Max tracks'); return; }
+  pushUndo();
+  const nt = new Track();
+  nt.buffer=t.buffer; nt.rate=t.rate; nt.p={...t.p}; nt.name=t.name+' copy';
+  tracks.push(nt); buildTrackEl(nt); refreshTrackUI(nt); syncChain(nt); drawWave(nt);
+  toast('Duplicated “'+t.name+'”');
+}
+function splitTrack(t, at){
+  if(!t.buffer){ toast('Load audio first'); return; }
+  const end = t.end;
+  if(at <= t.p.trimStart+0.001 || at >= end-0.001){ toast('Playhead must be inside the clip'); return; }
+  if(tracks.length >= MAX_TRACKS){ toast('Max tracks'); return; }
+  pushUndo();
+  const right = new Track();
+  right.buffer=t.buffer; right.rate=t.rate; right.p={...t.p};
+  right.p.trimStart=at; right.p.trimEnd=end; right.name=t.name+' (R)';
+  t.p.trimEnd = at;
+  tracks.push(right); buildTrackEl(right); refreshTrackUI(right); syncChain(right); drawWave(right);
+  refreshTrackUI(t); drawWave(t);
+  toast('Split at '+fmt(at));
+}
+/* tool 25: trim silence */
+function trimSilence(t){
+  if(!t.buffer){ toast('Load audio first'); return; }
+  pushUndo();
+  const d = t.buffer.getChannelData(0), sr = t.buffer.sampleRate, th = 0.004;
+  let a = 0, b = d.length-1;
+  while(a < d.length && Math.abs(d[a]) < th) a++;
+  while(b > a && Math.abs(d[b]) < th) b--;
+  if(a >= b){ toast('Track is silent'); return; }
+  t.p.trimStart = a/sr; t.p.trimEnd = (b+1)/sr;
+  refreshTrackUI(t); drawWave(t); updatePlayhead();
+  toast('Trimmed silence');
+}
+/* tool 26: auto-level all */
+function autoLevelAll(){
+  if(!tracks.some(t => t.buffer)){ toast('Load audio first'); return; }
+  pushUndo();
+  tracks.forEach(t => {
+    if(!t.buffer) return;
+    let peak = 0;
+    for(let c=0;c<t.buffer.numberOfChannels;c++){
+      const d = t.buffer.getChannelData(c);
+      for(let i=0;i<d.length;i++){ const a=Math.abs(d[i]); if(a>peak)peak=a; }
+    }
+    if(peak>0) t.p.volume = Math.min(1.5, 0.85/peak);
+    refreshTrackUI(t); syncChain(t);
+  });
+  toast('Auto-leveled ' + tracks.filter(t=>t.buffer).length + ' tracks');
+}
+
+/* ---------------- undo / redo (tool 19) ---------------- */
+function snapshot(){ return tracks.map(t => ({ id:t.id, name:t.name, buffer:t.buffer, rate:t.rate, p:{...t.p} })); }
+function pushUndo(){ undoStack.push(snapshot()); if(undoStack.length>60) undoStack.shift(); redoStack.length=0; }
+function restore(state){
+  tracks.forEach(t => { t.stopSources(); disconnectChain(t.fx); });
+  tracks.length = 0;
+  [...trackArea.querySelectorAll('.track')].forEach(e => e.remove());
+  state.forEach(s => {
+    const t = new Track();
+    t.id=s.id; t.name=s.name; t.buffer=s.buffer; t.rate=s.rate; t.p={...s.p};
+    tracks.push(t); buildTrackEl(t); refreshTrackUI(t); syncChain(t); drawWave(t);
+  });
+  nextId = Math.max(0, ...tracks.map(t=>t.id)) + 1;
+  updatePlayhead();
+}
+function undo(){ if(!undoStack.length){ toast('Nothing to undo'); return; } redoStack.push(snapshot()); restore(undoStack.pop()); toast('Undo'); }
+function redo(){ if(!redoStack.length){ toast('Nothing to redo'); return; } undoStack.push(snapshot()); restore(redoStack.pop()); toast('Redo'); }
+
+/* ---------------- WAV encode ---------------- */
+function bufferToWav(ab){
+  const ch = ab.numberOfChannels, sr = ab.sampleRate, len = ab.length;
+  const block = ch*2, dataSize = len*block;
+  const buf = new ArrayBuffer(44+dataSize), v = new DataView(buf);
+  const ws = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4,36+dataSize,true); ws(8,'WAVE');
+  ws(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+  v.setUint16(22,ch,true); v.setUint32(24,sr,true);
+  v.setUint32(28,sr*block,true); v.setUint16(32,block,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,dataSize,true);
+  const chans = []; for(let c=0;c<ch;c++) chans.push(ab.getChannelData(c));
+  let off = 44;
+  for(let i=0;i<len;i++) for(let c=0;c<ch;c++){
+    const s = Math.max(-1, Math.min(1, chans[c][i]));
+    v.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true); off += 2;
+  }
+  return new Blob([buf], {type:'audio/wav'});
+}
+
+/* ---------------- export ---------------- */
+async function exportMix(){
+  const ml = maxLen();
+  if(ml <= 0){ toast('Load some audio first'); return; }
+  const sr = 44100;
+  const offline = new OfflineAudioContext(2, Math.ceil(ml*sr), sr);
+  if(workletReady){ try{ await offline.audioWorklet.addModule('worklets.js'); }catch(e){} }
+  const buses = buildBuses(offline);
+  buses.master.gain.value = +$('masterVol').value;
+  applyMasterFx(buses, fxBypass);
+  setLimiter(buses, limiterOn);
+  tracks.forEach(t => {
+    if(!t.buffer || !t.audible || t.trimLen <= 0) return;
+    const fx = makeChain(offline, buses.masterIn, buses.reverb.input, buses.delay.input);
+    applyChainParams(fx, t.p, t.audible);
+    const src = offline.createBufferSource();
+    src.buffer = t.buffer; src.playbackRate.value = t.rate; src.connect(fx.input);
+    const outLen = t.trimLen/t.rate, vol = t.p.volume * (t.audible?1:0);
+    const g = fx.fader.gain;
+    g.cancelScheduledValues(0); g.setValueAtTime(vol, 0);
+    if(t.p.fadeIn>0){ g.setValueAtTime(0.0001,0); g.linearRampToValueAtTime(vol, Math.min(t.p.fadeIn,outLen)); }
+    if(t.p.fadeOut>0){ const ft=Math.max(0,outLen-t.p.fadeOut); g.setValueAtTime(vol,ft); g.linearRampToValueAtTime(0.0001,outLen); }
+    src.start(0, t.p.trimStart, t.trimLen);
+  });
+  toast('Rendering mixdown…');
+  const rendered = await offline.startRendering();
+  download(bufferToWav(rendered), 'dmq-mixdown.wav');
+  toast('Exported dmq-mixdown.wav');
+}
+
+/* ---------------- save / load project ---------------- */
+function u8ToB64(u8){ let out=''; const c=0x8000;
+  for(let i=0;i<u8.length;i+=c) out += String.fromCharCode.apply(null, u8.subarray(i,i+c));
+  return btoa(out); }
+function b64ToU8(b64){ const bin=atob(b64), u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8; }
+async function saveProject(){
+  const data = { v:3, master:+$('masterVol').value, bpm:+$('bpm').value, masterFx:{...masterFx}, tracks:[] };
+  for(const t of tracks){
+    let audio = null;
+    if(t.buffer) audio = u8ToB64(new Uint8Array(await bufferToWav(t.buffer).arrayBuffer()));
+    data.tracks.push({ name:t.name, rate:t.rate, p:{...t.p}, audio });
+  }
+  download(new Blob([JSON.stringify(data)], {type:'application/json'}), 'dmq-project.json');
+  toast('Project saved');
+}
+async function loadProject(file){
+  try{
+    const data = JSON.parse(await file.text());
+    const state = [];
+    for(const td of data.tracks){
+      let buffer = null;
+      if(td.audio){ const u8 = b64ToU8(td.audio); buffer = await audioCtx.decodeAudioData(u8.buffer); }
+      state.push({ id:0, name:td.name, buffer, rate:td.rate||1, p:{...defaultParams(), ...td.p} });
+    }
+    pushUndo(); restore(state);
+    if(data.master != null){ $('masterVol').value = data.master; LIVE.master.gain.value = +data.master; }
+    if(data.bpm != null) $('bpm').value = data.bpm;
+    if(data.masterFx){ Object.assign(masterFx, data.masterFx); applyMasterFx(LIVE, fxBypass); refreshMasterUI(); }
+    toast('Project loaded ('+state.length+' tracks)');
+  }catch(err){ alert('Load failed: '+err.message); }
+}
+
+/* ---------------- mic record ---------------- */
+async function toggleRecord(){
+  if(recording){ try{ recorder.stop(); }catch(e){} return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('Mic not available'); return; }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const chunks = [];
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(tr => tr.stop());
+      recording = false; $('btnRecord').classList.remove('on'); $('btnRecord').textContent = '⏺ Rec';
+      try{
+        const type = chunks[0] ? chunks[0].type : 'audio/webm';
+        const buf = await audioCtx.decodeAudioData(await new Blob(chunks,{type}).arrayBuffer());
+        let t = tracks.find(x => !x.buffer) || addTrack();
+        if(!t){ toast('Max tracks'); return; }
+        pushUndo();
+        t.buffer = buf; t.name = 'Rec '+new Date().toLocaleTimeString();
+        refreshTrackUI(t); syncChain(t); drawWave(t);
+        toast('Recording added');
+      }catch(err){ alert('Could not decode recording: '+err.message); }
+    };
+    recorder.start();
+    recording = true; $('btnRecord').classList.add('on'); $('btnRecord').textContent = '⏹ Stop';
+    toast('Recording… tap ⏹ Stop to finish');
+  }catch(err){ toast('Mic permission denied'); }
+}
+
+/* ---------------- master FX UI (tools 21,22) ---------------- */
+function refreshMasterUI(){
+  document.querySelectorAll('#masterPanel [data-m]').forEach(inp => {
+    const k = inp.dataset.m;
+    inp.value = masterFx[k];
+    const span = inp.parentElement.querySelector('.v');
+    if(span) span.textContent = trimNum(masterFx[k]);
+  });
+}
+document.querySelectorAll('#masterPanel [data-m]').forEach(inp => {
+  inp.addEventListener('input', () => {
+    masterFx[inp.dataset.m] = +inp.value;
+    const span = inp.parentElement.querySelector('.v');
+    if(span) span.textContent = trimNum(+inp.value);
+    applyMasterFx(LIVE, fxBypass);
+  });
+});
+
+/* ---------------- wire header ---------------- */
+$('btnPlay').addEventListener('click', play);
+$('btnPause').addEventListener('click', pause);
+$('btnStop').addEventListener('click', stop);
+$('btnAdd').addEventListener('click', () => { pushUndo(); addTrack(); });
+$('btnImport').addEventListener('click', () => $('multiFile').click());
+$('multiFile').addEventListener('change', e => { if(e.target.files.length) importFiles(e.target.files); });
+$('btnExport').addEventListener('click', exportMix);
+$('masterVol').addEventListener('input', e => LIVE.master.gain.value = +e.target.value);
+$('btnMasterFx').addEventListener('click', e => {
+  $('masterPanel').classList.toggle('open'); e.target.classList.toggle('on');
+});
+$('btnMetro').addEventListener('click', e => {
+  metroOn = !metroOn; e.target.classList.toggle('on', metroOn);
+  e.target.textContent = metroOn ? 'ON' : 'OFF';
+  if(playing){ stopMetronome(); scheduleMetronome(currentPos()); }
+});
+$('btnTap').addEventListener('click', tapTempo);
+$('btnLoop').addEventListener('click', e => {
+  loopOn = !loopOn; e.target.classList.toggle('on', loopOn); updatePlayhead();
+  if(loopOn && +$('loopEnd').value <= 0) $('loopEnd').value = maxLen().toFixed(1);
+});
+$('btnLimiter').addEventListener('click', e => {
+  limiterOn = !limiterOn; e.target.classList.toggle('on', limiterOn);
+  e.target.textContent = limiterOn ? 'ON' : 'OFF';
+  setLimiter(LIVE, limiterOn);
+});
+$('btnSpec').addEventListener('click', e => {
+  spectrumOn = !spectrumOn; e.target.classList.toggle('on', spectrumOn);
+  $('specWrap').classList.toggle('open', spectrumOn);
+});
+$('btnBypass').addEventListener('click', e => {          // tool 29
+  fxBypass = !fxBypass; e.target.classList.toggle('on', fxBypass);
+  refreshGains(); applyMasterFx(LIVE, fxBypass);
+  toast(fxBypass ? 'FX bypassed (dry)' : 'FX active');
+});
+$('btnUndo').addEventListener('click', undo);
+$('btnRedo').addEventListener('click', redo);
+$('btnAutoLevel').addEventListener('click', autoLevelAll);
+$('btnSave').addEventListener('click', saveProject);
+$('btnLoad').addEventListener('click', () => $('projFile').click());
+$('projFile').addEventListener('change', e => { if(e.target.files[0]) loadProject(e.target.files[0]); });
+$('btnRecord').addEventListener('click', toggleRecord);
+
+window.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if(e.code === 'Space'){ e.preventDefault(); playing ? pause() : play(); }
+  if(e.ctrlKey && e.key.toLowerCase() === 'z'){ e.preventDefault(); undo(); }
+  if(e.ctrlKey && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); }
+});
+window.addEventListener('resize', () => tracks.forEach(drawWave));
+
+/* ---------------- PWA install ---------------- */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e; $('btnInstall').style.display = 'inline-block';
+});
+$('btnInstall').addEventListener('click', async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  toast(outcome === 'accepted' ? 'Installed!' : 'Install dismissed');
+  deferredPrompt = null; $('btnInstall').style.display = 'none';
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+/* ---------------- boot ---------------- */
+(async function boot(){
+  workletReady = await loadWorklets(audioCtx);
+  LIVE = buildBuses(audioCtx);
+  vuData = new Uint8Array(LIVE.analyser.fftSize);
+  applyMasterFx(LIVE, fxBypass);
+  setLimiter(LIVE, limiterOn);
+  addTrack(); addTrack();
+  refreshMasterUI();
+  updatePlayhead();
+  requestAnimationFrame(loop);
+  console.log('[DMQ] AudioWorklet DSP:', workletReady
+    ? 'ACTIVE — gate + limiter + crusher running on the audio thread'
+    : 'unavailable — using GainNode/compressor fallbacks');
+})();
+</script>
+</body>
+</html>

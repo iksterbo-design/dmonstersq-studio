@@ -1,0 +1,31 @@
+# ---- secrets: never commit these ----
+keystore.properties
+android/keystore.properties
+*.jks
+*.keystore
+
+# ---- build output ----
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+.gradle/
+build/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ---- editors / OS ----
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- python ----
+__pycache__/
+*.pyc
+
+# ---- transient test artifacts ----
+_c.js

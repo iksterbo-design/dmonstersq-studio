@@ -1,0 +1,81 @@
+plugins {
+    id 'com.android.application'
+}
+
+// ---------------------------------------------------------------------------
+// Release signing.
+//   * CI   : set DMQ_KEYSTORE / DMQ_STORE_PASSWORD / DMQ_KEY_ALIAS / DMQ_KEY_PASSWORD
+//   * local: create android/keystore.properties (git-ignored)
+// If neither is present the release build is left UNSIGNED — which is exactly
+// what F-Droid wants, since their buildserver signs with its own key.
+// ---------------------------------------------------------------------------
+def ksProps = new Properties()
+def ksPropsFile = rootProject.file("keystore.properties")
+if (ksPropsFile.exists()) ksProps.load(new FileInputStream(ksPropsFile))
+
+def signStoreFile = System.getenv("DMQ_KEYSTORE")       ?: ksProps.getProperty("storeFile")
+def signStorePass = System.getenv("DMQ_STORE_PASSWORD") ?: ksProps.getProperty("storePassword")
+def signKeyAlias  = System.getenv("DMQ_KEY_ALIAS")      ?: ksProps.getProperty("keyAlias")
+def signKeyPass   = System.getenv("DMQ_KEY_PASSWORD")   ?: ksProps.getProperty("keyPassword")
+def canSign = signStoreFile != null && signStorePass != null &&
+              signKeyAlias != null && signKeyPass != null
+
+android {
+    namespace 'com.dmonstersq.studio'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.dmonstersq.studio"
+        minSdk 21
+        targetSdk 34
+        versionCode 3
+        versionName "3.0.0"
+        resValue "string", "app_name", "D MONSTERS Q STUDIO"
+    }
+
+    signingConfigs {
+        release {
+            if (canSign) {
+                storeFile file(signStoreFile)
+                storePassword signStorePass
+                keyAlias signKeyAlias
+                keyPassword signKeyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (canSign) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            applicationIdSuffix ".debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // The web app is shipped verbatim inside assets/www — no build step needed.
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.webkit:webkit:1.9.0'
+}

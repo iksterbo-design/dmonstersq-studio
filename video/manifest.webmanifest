@@ -1,0 +1,18 @@
+{
+  "name": "D MONSTERS Q STUDIO — VIDEO",
+  "short_name": "DMQ Video",
+  "description": "A multi-clip video mixer and editor that runs entirely in your browser. Trim, order, crossfade, colour-grade, title and export to WebM — no upload, no account.",
+  "id": "/dmonstersq-studio/video/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "categories": ["video", "productivity", "utilities"],
+  "icons": [
+    { "src": "../icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
