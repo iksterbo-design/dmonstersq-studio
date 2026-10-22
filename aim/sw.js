@@ -1,7 +1,7 @@
 /* D MONSTERS Q STUDIO — AIM LAB : service worker
    Network-first for the HTML shell, cache-first for icons.
    Bump CACHE when you ship changes. */
-const CACHE = 'dmq-aim-v3';
+const CACHE = 'dmq-aim-v4';
 const ASSETS = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {

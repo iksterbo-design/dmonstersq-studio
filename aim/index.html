@@ -141,6 +141,7 @@
       <div class="modes" id="modeList"></div>
       <div class="actions">
         <button class="btn primary" id="btnStart">▶ Start drill</button>
+        <button class="btn" id="btnEndless">♾️ Endless — play until you stop</button>
         <button class="btn" id="btnWarmup">🔥 Warmup routine</button>
         <button class="btn" id="btnFull">⛶ Fullscreen</button>
       </div>
@@ -1318,7 +1319,12 @@ $('sDiff').addEventListener('change', e => { S.diff = e.target.value; saveSettin
 $('sAdaptive').addEventListener('change', e => { S.adaptive = e.target.value === '1'; saveSettings(); toast(S.adaptive ? 'Adaptive difficulty ON' : 'Adaptive difficulty OFF'); });
 $('sTheme').addEventListener('change', e => { S.theme = e.target.value; saveSettings(); });
 
-/* warmup + fullscreen */
+/* warmup + fullscreen + endless */
+$('btnEndless').addEventListener('click', () => {
+  S.endless = true; saveSettings(); syncSettingsUI();
+  toast('♾️ Endless — press Esc to stop');
+  startDrill();
+});
 $('btnWarmup').addEventListener('click', startWarmup);
 $('btnFull').addEventListener('click', () => {
   const el = document.documentElement;
