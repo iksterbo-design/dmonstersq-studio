@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from make_icons import render, write_png          # noqa: E402
 
-WEB_FILES = ["index.html", "worklets.js", "manifest.webmanifest", "sw.js"]
+WEB_FILES = ["index.html", "worklets.js", "manifest.webmanifest", "sw.js", "compat.js", "djtools.js", "manual.js"]
 WWW = os.path.join(HERE, "android", "app", "src", "main", "assets", "www")
 RES = os.path.join(HERE, "android", "app", "src", "main", "res")
 

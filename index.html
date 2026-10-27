@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0d1117">
-<meta name="description" content="D MONSTERS Q STUDIO — a 30-tool multitrack audio mixing & editing studio that runs entirely in your browser.">
+<meta name="description" content="D MONSTERS Q STUDIO — a 131-tool multitrack audio mixing & editing studio (31 core + 100 DJ tools) that runs entirely in your browser.">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="compat.js"></script>
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>D MONSTERS Q STUDIO — Mix &amp; Edit</title>
@@ -50,6 +51,11 @@
   #masterPanel{display:none;gap:10px;padding:8px 12px;background:var(--panel3);
     border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
   #masterPanel.open{display:flex}
+  #djPanel.open{display:block !important}
+  .dj-set{margin-bottom:10px}
+  .dj-set-title{font-size:11px;color:var(--acc2);font-weight:700;margin-bottom:4px}
+  .dj-tools{display:flex;flex-wrap:wrap;gap:4px}
+  .dj-tool.on{background:var(--acc2);color:#04211d;border-color:var(--acc2)}
   #trackArea{flex:1;overflow-y:auto;position:relative;padding:10px 12px 28px;-webkit-overflow-scrolling:touch}
   #playhead{position:absolute;top:8px;bottom:20px;width:2px;background:var(--acc2);left:12px;
     pointer-events:none;box-shadow:0 0 8px var(--acc2);z-index:5}
@@ -97,7 +103,7 @@
 
 <header>
   <div class="logo">D MONSTERS Q STUDIO</div>
-  <div class="badge">31 TOOLS</div>
+  <div class="badge">131 TOOLS</div>
   <div class="transport">
     <button class="tbtn play" id="btnPlay" title="Play">▶</button>
     <button class="tbtn" id="btnPause" title="Pause">⏸</button>
@@ -134,8 +140,12 @@
   <button class="btn" id="btnAdd">＋ Track</button>
   <button class="btn" id="btnImport">＋ Files</button>
   <button class="btn primary" id="btnExport">⬇ WAV</button>
+  <button class="btn" id="btnManual">📖 MANUAL</button>
+  <button class="btn" id="btnDJTools">🎧 DJ TOOLS</button>
   <button class="btn" id="btnInstall" style="display:none">📲 Install</button>
 </header>
+
+<div id="djPanel" style="display:none;max-height:40vh;overflow-y:auto;padding:8px 12px;background:var(--panel3);border-bottom:1px solid var(--line)"></div>
 
 <div id="masterPanel">
   <span style="font-size:11px;color:var(--acc2);font-weight:700">MASTER CHAIN</span>
@@ -152,7 +162,7 @@
 
 <div id="specWrap"><canvas id="spec"></canvas></div>
 <div class="hint">
-  <b>31 tools.</b> Load audio → FX rack → edit → mix → Export WAV.
+  <b>131 tools.</b> Load audio → FX rack → edit → mix → Export WAV. 31 core + 100 DJ tools.
   <kbd>Space</kbd> play · <kbd>Ctrl+Z</kbd> undo · tap a waveform to seek.
 </div>
 <div id="toast"></div>
@@ -1023,6 +1033,16 @@ $('btnImport').addEventListener('click', () => $('multiFile').click());
 $('multiFile').addEventListener('change', e => { if(e.target.files.length) importFiles(e.target.files); });
 $('btnExport').addEventListener('click', exportMix);
 $('masterVol').addEventListener('input', e => LIVE.master.gain.value = +e.target.value);
+$('btnManual').addEventListener('click', () => { if(window.openManual) window.openManual(); });
+$('btnDJTools').addEventListener('click', e => {
+  const p = $('djPanel'); p.classList.toggle('open');
+  e.target.classList.toggle('on', p.classList.contains('open'));
+  if(p.classList.contains('open') && !p.dataset.built){
+    if(window.buildDJPanel) window.buildDJPanel();
+    p.dataset.built = '1';
+  }
+  toast(p.classList.contains('open') ? 'DJ Tools open (100)' : 'DJ Tools closed');
+});
 $('btnMasterFx').addEventListener('click', e => {
   $('masterPanel').classList.toggle('open'); e.target.classList.toggle('on');
 });
@@ -1098,5 +1118,7 @@ if('serviceWorker' in navigator){
     : 'unavailable — using GainNode/compressor fallbacks');
 })();
 </script>
+<script src="djtools.js"></script>
+<script src="manual.js"></script>
 </body>
 </html>

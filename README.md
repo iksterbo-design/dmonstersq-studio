@@ -1,6 +1,6 @@
 # D MONSTERS Q STUDIO
 
-A **30-tool multitrack audio mixing & editing studio** that runs entirely in the browser.
+A **131-tool multitrack audio mixing & editing studio** (31 core + 100 DJ tools) that runs entirely in the browser.
 No upload, no account, no server — all audio is processed on-device with the **Web Audio API**.
 
 ---

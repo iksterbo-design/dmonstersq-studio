@@ -59,6 +59,11 @@ public class MainActivity extends AppCompatActivity {
         s.setAllowContentAccess(false);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
         s.setSupportZoom(false);
+        // Compatibility with older Motorola / legacy WebView builds
+        s.setUseWideViewPort(true);
+        s.setLoadWithOverviewMode(true);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         web.setWebViewClient(new WebViewClientCompat() {
             @Override
