@@ -1,5 +1,8 @@
 # D MONSTERS Q STUDIO
 
+> 🚀 **Live Preview:** https://iksterbo-design.github.io/dmonstersq-studio/
+> _Runs entirely in the browser — no install, no account, no server._
+
 📖 **[User Manual (MANUAL.md)](MANUAL.md)** — install, usage, 100 DJ tools, Motorola/older-phone tips, troubleshooting. Also available in-app via the **📖 MANUAL** button in the header.
 
 A **131-tool multitrack audio mixing & editing studio** (31 core + 100 DJ tools) that runs entirely in the browser.
